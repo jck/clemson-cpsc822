@@ -17,13 +17,11 @@ unsigned int U_READ_REG(unsigned int reg) {
 }
 
 int main() {
-  int result;
   int fd = open("/dev/kyouko3", O_RDWR);
   kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ|PROT_WRITE,
       MAP_SHARED, fd, 0);
-  result = U_READ_REG(Device_RAM);
-
-  printf("Ram size is %n MB\n", result);
+  unsigned int result = U_READ_REG(Device_RAM);
+  printf("Ram size is %u MB\n", result);
   close(fd);
   return 0;
 }
