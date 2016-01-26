@@ -23,17 +23,29 @@ struct kyouko3_vars {
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
+  kyouko3.k_control_base = ioremap(kyouko3.p_control_base, kyouko3.p_control_length);
+  kyouko3.k_card_ram_base = ioremap(kyouko3.p_card_ram_base, kyouko3.p_card_ram_length);
   return 0;
 }
 
 int kyouko3_release(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_release\n");
+  iounmap(kyouko3.k_control_base);
+  iounmap(kyouko3.k_card_ram_base);
   return 0;
 }
 
+int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
+      
+  printk(KERN_ALERT "mmap\n");
+  int vma_size = vma->vm_end - vma->vm_start;
+  io_remap_pfn_range(vma, vma->vm_start, kyouko3.p_control_base>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
+  return 0;
+}
 struct file_operations kyouko3_fops = {
   .open=kyouko3_open,
   .release=kyouko3_release,
+  .mmap=kyouko3_mmap,
   .owner=THIS_MODULE
 };
 
@@ -50,6 +62,7 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   //2. physicla base address of the onboard ram(framebuffer)
   kyouko3.p_card_ram_base = pci_resource_start(pdev, 2);
   kyouko3.p_card_ram_length = pci_resource_len(pdev, 2);
+  printk(KERN_DEBUG "ram len: %d\n", kyouko3.p_card_ram_length);
 
   pci_enable_device(pdev);
   pci_set_master(pdev);
