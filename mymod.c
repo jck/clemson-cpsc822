@@ -12,6 +12,8 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define PCI_VENDOR_ID_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
+
+
 struct kyouko3_vars {
   unsigned int p_control_base;
   unsigned long p_control_length;
@@ -20,6 +22,10 @@ struct kyouko3_vars {
   unsigned int * k_control_base;
   unsigned int * k_card_ram_base;
 } kyouko3;
+
+inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
+	*(kyouko3.k_control_base+(reg>>2)) = value;
+}
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
