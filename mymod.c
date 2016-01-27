@@ -63,12 +63,12 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   // 1. physical base addr of ctrl region
   kyouko3.p_control_base = pci_resource_start(pdev, 1);
   kyouko3.p_control_length = pci_resource_len(pdev, 1);
-  printk(KERN_DEBUG "control len: %d\n", kyouko3.p_control_length);
+  printk(KERN_DEBUG "control len: %lu\n", kyouko3.p_control_length);
 
   //2. physicla base address of the onboard ram(framebuffer)
   kyouko3.p_card_ram_base = pci_resource_start(pdev, 2);
   kyouko3.p_card_ram_length = pci_resource_len(pdev, 2);
-  printk(KERN_DEBUG "ram len: %d\n", kyouko3.p_card_ram_length);
+  printk(KERN_DEBUG "ram len: %lu\n", kyouko3.p_card_ram_length);
 
   pci_enable_device(pdev);
   pci_set_master(pdev);
