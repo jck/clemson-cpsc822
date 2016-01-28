@@ -29,10 +29,15 @@ inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
 	*(kyouko3.control.k_base+(reg>>2)) = value;
 }
 
+inline unsigned int K_READ_REG(unsigned int reg){
+	return *(kyouko3.control.k_base+(reg>>2));
+}
+
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
   kyouko3.control.k_base = ioremap(kyouko3.control.p_base, kyouko3.control.len);
   kyouko3.fb.k_base = ioremap(kyouko3.fb.p_base, kyouko3.fb.len);
+  printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
 }
 
@@ -68,18 +73,16 @@ struct file_operations kyouko3_fops = {
 
 struct cdev kyouko3_dev;
 
+inline void get_region_info(struct pci_dev *pdev, int num, struct phys_region *region) {
+  region->p_base = pci_resource_start(pdev, num);
+  region->len = pci_resource_len(pdev, num);
+}
+
 
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   printk(KERN_ALERT "starting probe\n");
-  // 1. physical base addr of ctrl region
-  kyouko3.control.p_base = pci_resource_start(pdev, 1);
-  kyouko3.control.len = pci_resource_len(pdev, 1);
-  printk(KERN_DEBUG "control base, len: %x, %x\n", kyouko3.control.p_base, kyouko3.control.len);
-
-  //2. physicla base address of the onboard ram(framebuffer)
-  kyouko3.fb.p_base = pci_resource_start(pdev, 2);
-  kyouko3.fb.len = pci_resource_len(pdev, 2);
-  printk(KERN_DEBUG "ram len: %lu\n", kyouko3.fb.len);
+  get_region_info(pdev, 1, &kyouko3.control);
+  get_region_info(pdev, 2, &kyouko3.fb);
 
   pci_enable_device(pdev);
   pci_set_master(pdev);
