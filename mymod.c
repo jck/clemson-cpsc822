@@ -6,6 +6,8 @@
 #include <linux/cdev.h>
 #include <linux/pci.h>
 
+#include "kyouko.h"
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Keerthan Jaic");
 
@@ -22,6 +24,7 @@ struct phys_region {
 struct kyouko3_vars {
   struct phys_region control;
   struct phys_region fb;
+  bool graphics_on;
 } kyouko3;
 
 
@@ -51,23 +54,79 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   printk(KERN_ALERT "mmap\n");
   int ret = 0;
-  int vma_size = vma->vm_end - vma->vm_start;
 
-  switch(vma->vm_pgoff) {
+  switch(vma->vm_pgoff<<PAGE_SHIFT) {
   case 0:
     ret = vm_iomap_memory(vma, kyouko3.control.p_base, kyouko3.control.len);
     break;
-  case 1:
-    ret = vm_iomap_memory(vma, kyouko3.fb.p_base, kyouko3.fb.len);
+  case 0x400000:
+    printk(KERN_ALERT "%d\n", kyouko3.fb.len);
+    // vm_iomap_memory fails for the fb for some reason
+    // Investigate it
+    // ret = vm_iomap_memory(vma, kyouko3.fb.p_base>>PAGE_SHIFT, kyouko3.fb.len);
+    ret = io_remap_pfn_range(vma, vma->vm_start, kyouko3.fb.p_base>>PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
     break;
   }
   return ret;
+}
+
+static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
+
+  float float_one = 1.0;
+  unsigned int int_float_one = *(unsigned int *)&float_one;
+
+  switch(cmd) {
+    case VMODE:
+      if(arg == GRAPHICS_ON) {
+
+        printk(KERN_ALERT "Turning ON Graphics\n");
+
+        K_WRITE_REG(FRAME_COLUMNS, 1024);        
+        K_WRITE_REG(FRAME_ROWS, 768);        
+        K_WRITE_REG(FRAME_ROWPITCH, 1024*4);        
+        K_WRITE_REG(FRAME_PIXELFORMAT, 0xf888);
+        K_WRITE_REG(FRAME_STARTADDRESS, 0);
+
+        K_WRITE_REG(ENC_WIDTH, 1024);
+        K_WRITE_REG(ENC_HEIGHT, 768);
+        K_WRITE_REG(ENC_OFFSETX, 0);
+        K_WRITE_REG(ENC_OFFSETY, 0);
+        K_WRITE_REG(ENC_FRAME, 0);
+
+        K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
+        K_WRITE_REG(CONF_MODESET, 0);
+
+        K_WRITE_REG(CLEAR_COLOR, int_float_one);
+        K_WRITE_REG(CLEAR_COLOR + 0x0004, int_float_one);
+        K_WRITE_REG(CLEAR_COLOR + 0x0008, int_float_one);
+        K_WRITE_REG(CLEAR_COLOR + 0x000c, int_float_one);
+
+        K_WRITE_REG(RASTER_FLUSH, 0);
+        K_WRITE_REG(RASTER_CLEAR, 1);
+
+        kyouko3.graphics_on = 1;
+        printk(KERN_ALERT "Graphics ON\n");
+      }
+
+      else if(arg == GRAPHICS_OFF) {
+        K_WRITE_REG(CONFIG_REBOOT, 0);
+        kyouko3.graphics_on = 0;
+        printk(KERN_ALERT "Graphics OFF\n");
+      }
+      break;
+    // case FIFO_QUEUE:
+    //   break;
+    // case FIFO_FLUSH:
+    //   break;
+  }
+  return 0;
 }
 
 struct file_operations kyouko3_fops = {
   .open=kyouko3_open,
   .release=kyouko3_release,
   .mmap=kyouko3_mmap,
+  .unlocked_ioctl=kyouko3_ioctl,
   .owner=THIS_MODULE
 };
 

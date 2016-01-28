@@ -3,7 +3,7 @@
 // IOCTL
 #define VMODE _IOW(0xcc,0,unsigned long)
 #define FIFO_QUEUE _IOWR(0XCC,3,unsigned long)
-#define FIFO_FLUSH *IO(0xcc,4)
+#define FIFO_FLUSH _IO(0xcc,4)
 
 #define GRAPHICS_OFF 0
 #define GRAPHICS_ON 1
@@ -14,17 +14,17 @@
 #define FRAME_PIXELFORMAT 0x800C
 #define FRAME_STARTADDRESS 0x8010
 
-#define DAC_WIDTH 0x9000
-#define DAC_HEIGHT 0x9004
-#define DAC_OFFSETX 0x9008
-#define DAC_OFFSETY 0x900c
-#define DAC_FRAME 0x9010
+#define ENC_WIDTH 0x9000
+#define ENC_HEIGHT 0x9004
+#define ENC_OFFSETX 0x9008
+#define ENC_OFFSETY 0x900c
+#define ENC_FRAME 0x9010
 
 
 #define CLEAR_COLOR 0x5100
 
-#define RASTERCLEAR 0x3008
-#define RASTERFLUSH 0x3FFC
+#define RASTER_CLEAR 0x3008
+#define RASTER_FLUSH 0x3FFC
 
 #define CONF_ACCELERATION 0x1010
 #define CONF_MODESET 0x1008
