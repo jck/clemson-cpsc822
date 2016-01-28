@@ -1,4 +1,5 @@
 obj-m += mymod.o
+ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
 all: module user
 
