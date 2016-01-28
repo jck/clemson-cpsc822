@@ -29,11 +29,11 @@ struct kyouko3_vars {
 
 
 inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
-	writel(value, kyouko3.control.k_base+(reg>>2));
+	*(kyouko3.control.k_base+(reg>>2)) = value;
 }
 
 inline unsigned int K_READ_REG(unsigned int reg){
-	return readl(kyouko3.control.k_base+(reg>>2));
+	return *(kyouko3.control.k_base+(reg>>2));
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
