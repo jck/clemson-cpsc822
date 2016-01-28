@@ -17,5 +17,9 @@ rmod: module
 	scp mymod.ko 822:
 	ssh 822 'rmmod mymod; insmod mymod.ko'
 
+.PHONY: ruser
+ruser: user
+	ssh 822 ./user
+
 clean:
 	rm *.ko *.o *.mod.c
