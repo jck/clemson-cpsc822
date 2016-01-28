@@ -15,7 +15,7 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
 struct phys_region {
-  unsigned int p_base;
+  phys_addr_t p_base;
   unsigned long len;
   unsigned int * k_base;
 };
