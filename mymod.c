@@ -60,7 +60,6 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
     ret = vm_iomap_memory(vma, kyouko3.control.p_base, kyouko3.control.len);
     break;
   case 0x400000:
-    printk(KERN_ALERT "%d\n", kyouko3.fb.len);
     // vm_iomap_memory fails for the fb for some reason
     // Investigate it
     // ret = vm_iomap_memory(vma, kyouko3.fb.p_base>>PAGE_SHIFT, kyouko3.fb.len);
@@ -143,10 +142,8 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   get_region_info(pdev, 1, &kyouko3.control);
   get_region_info(pdev, 2, &kyouko3.fb);
 
-  pci_enable_device(pdev);
   pci_set_master(pdev);
-
-  return 0;
+  return pci_enable_device(pdev);
 }
 
 struct pci_device_id kyouko3_dev_ids[] = {
