@@ -46,7 +46,7 @@ int kyouko3_open(struct inode *inode, struct file *fp) {
 
 int kyouko3_release(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_release\n");
-  iounmap(kyouko3.control.p_base);
+  iounmap(kyouko3.control.k_base);
   iounmap(kyouko3.fb.k_base);
   return 0;
 }
