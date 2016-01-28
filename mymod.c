@@ -45,8 +45,9 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
       
   printk(KERN_ALERT "mmap\n");
   int vma_size = vma->vm_end - vma->vm_start;
-  io_remap_pfn_range(vma, vma->vm_start, kyouko3.p_control_base>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
-  return 0;
+  // io_remap_pfn_range(vma, vma->vm_start, kyouko3.p_control_base>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
+  return vm_iomap_memory(vma, kyouko3.p_control_base, kyouko3.p_control_length);
+  // return 0;
 }
 struct file_operations kyouko3_fops = {
   .open=kyouko3_open,
