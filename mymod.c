@@ -42,13 +42,21 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 }
 
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
-      
   printk(KERN_ALERT "mmap\n");
+  int ret = 0;
   int vma_size = vma->vm_end - vma->vm_start;
-  // io_remap_pfn_range(vma, vma->vm_start, kyouko3.p_control_base>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
-  return vm_iomap_memory(vma, kyouko3.p_control_base, kyouko3.p_control_length);
-  // return 0;
+
+  switch(vma->vm_pgoff) {
+  case 0:
+    ret = vm_iomap_memory(vma, kyouko3.p_control_base, kyouko3.p_control_length);
+    break;
+  case 1:
+    ret = vm_iomap_memory(vma, kyouko3.p_card_ram_base, kyouko3.p_card_ram_length);
+    break;
+  }
+  return ret;
 }
+
 struct file_operations kyouko3_fops = {
   .open=kyouko3_open,
   .release=kyouko3_release,
@@ -64,7 +72,7 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   // 1. physical base addr of ctrl region
   kyouko3.p_control_base = pci_resource_start(pdev, 1);
   kyouko3.p_control_length = pci_resource_len(pdev, 1);
-  printk(KERN_DEBUG "control len: %lu\n", kyouko3.p_control_length);
+  printk(KERN_DEBUG "control base, len: %x, %x\n", kyouko3.p_control_base, kyouko3.p_control_length);
 
   //2. physicla base address of the onboard ram(framebuffer)
   kyouko3.p_card_ram_base = pci_resource_start(pdev, 2);
