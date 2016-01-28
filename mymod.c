@@ -12,32 +12,34 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define PCI_VENDOR_ID_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
+struct phys_region {
+  unsigned int p_base;
+  unsigned long len;
+  unsigned int * k_base;
+};
 
 
 struct kyouko3_vars {
-  unsigned int p_control_base;
-  unsigned long p_control_length;
-  unsigned int p_card_ram_base;
-  unsigned long p_card_ram_length;
-  unsigned int * k_control_base;
-  unsigned int * k_card_ram_base;
+  struct phys_region control;
+  struct phys_region fb;
 } kyouko3;
 
+
 inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
-	*(kyouko3.k_control_base+(reg>>2)) = value;
+	*(kyouko3.control.k_base+(reg>>2)) = value;
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
-  kyouko3.k_control_base = ioremap(kyouko3.p_control_base, kyouko3.p_control_length);
-  kyouko3.k_card_ram_base = ioremap(kyouko3.p_card_ram_base, kyouko3.p_card_ram_length);
+  kyouko3.control.k_base = ioremap(kyouko3.control.p_base, kyouko3.control.len);
+  kyouko3.fb.k_base = ioremap(kyouko3.fb.p_base, kyouko3.fb.len);
   return 0;
 }
 
 int kyouko3_release(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_release\n");
-  iounmap(kyouko3.k_control_base);
-  iounmap(kyouko3.k_card_ram_base);
+  iounmap(kyouko3.control.p_base);
+  iounmap(kyouko3.fb.k_base);
   return 0;
 }
 
@@ -48,10 +50,10 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 
   switch(vma->vm_pgoff) {
   case 0:
-    ret = vm_iomap_memory(vma, kyouko3.p_control_base, kyouko3.p_control_length);
+    ret = vm_iomap_memory(vma, kyouko3.control.p_base, kyouko3.control.len);
     break;
   case 1:
-    ret = vm_iomap_memory(vma, kyouko3.p_card_ram_base, kyouko3.p_card_ram_length);
+    ret = vm_iomap_memory(vma, kyouko3.fb.p_base, kyouko3.fb.len);
     break;
   }
   return ret;
@@ -70,14 +72,14 @@ struct cdev kyouko3_dev;
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   printk(KERN_ALERT "starting probe\n");
   // 1. physical base addr of ctrl region
-  kyouko3.p_control_base = pci_resource_start(pdev, 1);
-  kyouko3.p_control_length = pci_resource_len(pdev, 1);
-  printk(KERN_DEBUG "control base, len: %x, %x\n", kyouko3.p_control_base, kyouko3.p_control_length);
+  kyouko3.control.p_base = pci_resource_start(pdev, 1);
+  kyouko3.control.len = pci_resource_len(pdev, 1);
+  printk(KERN_DEBUG "control base, len: %x, %x\n", kyouko3.control.p_base, kyouko3.control.len);
 
   //2. physicla base address of the onboard ram(framebuffer)
-  kyouko3.p_card_ram_base = pci_resource_start(pdev, 2);
-  kyouko3.p_card_ram_length = pci_resource_len(pdev, 2);
-  printk(KERN_DEBUG "ram len: %lu\n", kyouko3.p_card_ram_length);
+  kyouko3.fb.p_base = pci_resource_start(pdev, 2);
+  kyouko3.fb.len = pci_resource_len(pdev, 2);
+  printk(KERN_DEBUG "ram len: %lu\n", kyouko3.fb.len);
 
   pci_enable_device(pdev);
   pci_set_master(pdev);
