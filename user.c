@@ -38,8 +38,9 @@ int main() {
       MAP_SHARED, fd, 0x400000);
   // printf("%u\n", kyouko3.u_fb_base);
   ioctl(fd, VMODE, GRAPHICS_ON);
-  // draw_line_fb();
-  sleep(10);
+  sleep(2);
+  draw_line_fb();
+  sleep(2);
   ioctl(fd, VMODE, GRAPHICS_OFF);
   close(fd);
   return 0;

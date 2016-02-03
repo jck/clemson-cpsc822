@@ -50,26 +50,21 @@ inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
 }
 
 inline unsigned int K_READ_REG(unsigned int reg){
+  rmb();
 	return *(kyouko3.control.k_base+(reg>>2));
 }
 
 void fifo_init(void) {
-  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8192, &kyouko3.fifo.p_base);
-  printk("kbase size %d\n", sizeof(kyouko3.fifo.p_base));
+  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8192u, &kyouko3.fifo.p_base);
   K_WRITE_REG(FIFO_START, kyouko3.fifo.p_base);
-  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8192);
-  K_WRITE_REG(FIFO_HEAD, 0);
+  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8192u);
   kyouko3.fifo.head = 0;
   kyouko3.fifo.tail_cache = 0;
-  while (K_READ_REG(FIFO_TAIL) != 0) {
-    schedule();
-  }
-
-  printk("ft: %d\n", K_READ_REG(FIFO_TAIL));
 }
 
 
 void fifo_flush(void) {
+  K_WRITE_REG(FIFO_HEAD, kyouko3.fifo.head);
   while(kyouko3.fifo.tail_cache != kyouko3.fifo.head) {
     kyouko3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
     schedule();
@@ -139,8 +134,6 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         K_WRITE_REG(FRAME_PIXELFORMAT, 0xf888);
         K_WRITE_REG(FRAME_STARTADDRESS, 0);
 
-        // K_WRITE_REG(CONF_ACCELERATION, 0);
-
         K_WRITE_REG(ENC_WIDTH, 1024);
         K_WRITE_REG(ENC_HEIGHT, 768);
         K_WRITE_REG(ENC_OFFSETX, 0);
@@ -149,16 +142,16 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 
         K_WRITE_REG(CONF_MODESET, 0);
 
-        msleep(5000);
+        msleep(10);
 
-        fifo_write(CLEAR_COLOR, int_float_one);
-        fifo_write(CLEAR_COLOR + 0x0004, int_float_one);
-        fifo_write(CLEAR_COLOR + 0x0008, int_float_one);
-        fifo_write(CLEAR_COLOR + 0x000c, int_float_one);
+        fifo_write(CLEAR_COLOR, 0);
+        fifo_write(CLEAR_COLOR + 0x0004, 0);
+        fifo_write(CLEAR_COLOR + 0x0008, 0);
+        fifo_write(CLEAR_COLOR + 0x000c, 0);
 
         fifo_write(RASTER_CLEAR, 3);
         fifo_write(RASTER_FLUSH, 0);
-        // fifo_flush();
+        fifo_flush();
         // K_WRITE_REG(RASTER_FLUSH, 0);
         // K_WRITE_REG(RASTER_CLEAR, 1);
 
