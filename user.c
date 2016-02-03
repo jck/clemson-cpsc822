@@ -36,10 +36,10 @@ int main() {
       MAP_SHARED, fd, 0);
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
       MAP_SHARED, fd, 0x400000);
-  printf("%u\n", kyouko3.u_fb_base);
+  // printf("%u\n", kyouko3.u_fb_base);
   ioctl(fd, VMODE, GRAPHICS_ON);
-  draw_line_fb();
-  sleep(5);
+  // draw_line_fb();
+  sleep(10);
   ioctl(fd, VMODE, GRAPHICS_OFF);
   close(fd);
   return 0;

@@ -1,4 +1,5 @@
 #include <linux/init.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/kernel_stat.h>
@@ -20,11 +21,27 @@ struct phys_region {
   unsigned int * k_base;
 };
 
+struct fifo_entry {
+  u32 command;
+  u32 value;
+};
+
+struct _fifo {
+  // dma_addr_t p_base;
+  dma_addr_t p_base;
+  // u32 p_base;
+  struct fifo_entry *k_base;
+  u32 head;
+  u32 tail_cache;
+};
+
 
 struct kyouko3_vars {
   struct phys_region control;
   struct phys_region fb;
   bool graphics_on;
+  struct _fifo fifo;
+  struct pci_dev *pdev;
 } kyouko3;
 
 
@@ -36,10 +53,43 @@ inline unsigned int K_READ_REG(unsigned int reg){
 	return *(kyouko3.control.k_base+(reg>>2));
 }
 
+void fifo_init(void) {
+  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8192, &kyouko3.fifo.p_base);
+  printk("kbase size %d\n", sizeof(kyouko3.fifo.p_base));
+  K_WRITE_REG(FIFO_START, kyouko3.fifo.p_base);
+  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8192);
+  K_WRITE_REG(FIFO_HEAD, 0);
+  kyouko3.fifo.head = 0;
+  kyouko3.fifo.tail_cache = 0;
+  while (K_READ_REG(FIFO_TAIL) != 0) {
+    schedule();
+  }
+
+  printk("ft: %d\n", K_READ_REG(FIFO_TAIL));
+}
+
+
+void fifo_flush(void) {
+  while(kyouko3.fifo.tail_cache != kyouko3.fifo.head) {
+    kyouko3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
+    schedule();
+  }
+}
+
+void fifo_write(u32 cmd, u32 val) {
+  kyouko3.fifo.k_base[kyouko3.fifo.head].command = cmd;
+  kyouko3.fifo.k_base[kyouko3.fifo.head].value = val;
+  kyouko3.fifo.head++;
+  msleep(10);
+  printk("ft: %d fs:%d\n", K_READ_REG(FIFO_TAIL), K_READ_REG(FIFO_STATUS));
+  // fifo_flush();
+}
+
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
   kyouko3.control.k_base = ioremap(kyouko3.control.p_base, kyouko3.control.len);
   kyouko3.fb.k_base = ioremap(kyouko3.fb.p_base, kyouko3.fb.len);
+  fifo_init();
   printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
 }
@@ -48,6 +98,7 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_release\n");
   iounmap(kyouko3.control.k_base);
   iounmap(kyouko3.fb.k_base);
+  pci_free_consistent(kyouko3.pdev, 8192, kyouko3.fifo.k_base, kyouko3.fifo.p_base);
   return 0;
 }
 
@@ -80,11 +131,15 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 
         printk(KERN_ALERT "Turning ON Graphics\n");
 
+        K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
+
         K_WRITE_REG(FRAME_COLUMNS, 1024);        
         K_WRITE_REG(FRAME_ROWS, 768);        
         K_WRITE_REG(FRAME_ROWPITCH, 1024*4);        
         K_WRITE_REG(FRAME_PIXELFORMAT, 0xf888);
         K_WRITE_REG(FRAME_STARTADDRESS, 0);
+
+        // K_WRITE_REG(CONF_ACCELERATION, 0);
 
         K_WRITE_REG(ENC_WIDTH, 1024);
         K_WRITE_REG(ENC_HEIGHT, 768);
@@ -92,16 +147,20 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         K_WRITE_REG(ENC_OFFSETY, 0);
         K_WRITE_REG(ENC_FRAME, 0);
 
-        K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
         K_WRITE_REG(CONF_MODESET, 0);
 
-        K_WRITE_REG(CLEAR_COLOR, int_float_one);
-        K_WRITE_REG(CLEAR_COLOR + 0x0004, int_float_one);
-        K_WRITE_REG(CLEAR_COLOR + 0x0008, int_float_one);
-        K_WRITE_REG(CLEAR_COLOR + 0x000c, int_float_one);
+        msleep(5000);
 
-        K_WRITE_REG(RASTER_FLUSH, 0);
-        K_WRITE_REG(RASTER_CLEAR, 1);
+        fifo_write(CLEAR_COLOR, int_float_one);
+        fifo_write(CLEAR_COLOR + 0x0004, int_float_one);
+        fifo_write(CLEAR_COLOR + 0x0008, int_float_one);
+        fifo_write(CLEAR_COLOR + 0x000c, int_float_one);
+
+        fifo_write(RASTER_CLEAR, 3);
+        fifo_write(RASTER_FLUSH, 0);
+        // fifo_flush();
+        // K_WRITE_REG(RASTER_FLUSH, 0);
+        // K_WRITE_REG(RASTER_CLEAR, 1);
 
         kyouko3.graphics_on = 1;
         printk(KERN_ALERT "Graphics ON\n");
@@ -139,6 +198,7 @@ inline void get_region_info(struct pci_dev *pdev, int num, struct phys_region *r
 
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   printk(KERN_ALERT "starting probe\n");
+  kyouko3.pdev = pdev;
   get_region_info(pdev, 1, &kyouko3.control);
   get_region_info(pdev, 2, &kyouko3.fb);
 
