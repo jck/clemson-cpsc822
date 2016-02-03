@@ -119,6 +119,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 
   float float_one = 1.0;
   unsigned int int_float_one = *(unsigned int *)&float_one;
+  struct fifo_entry entry;
 
   switch(cmd) {
     case VMODE:
@@ -165,10 +166,15 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         printk(KERN_ALERT "Graphics OFF\n");
       }
       break;
-    // case FIFO_QUEUE:
-    //   break;
-    // case FIFO_FLUSH:
-    //   break;
+    case FIFO_QUEUE:
+      printk(KERN_ALERT "FIFO_QUEUE\n");
+      copy_from_user(&entry, (struct fifo_entry*) arg, sizeof(struct fifo_entry));
+      fifo_write(entry.command, entry.value);
+      break;
+    case FIFO_FLUSH:
+      printk(KERN_ALERT "FIFO_FLUSH\n");
+      fifo_flush();
+      break;
   }
   return 0;
 }
