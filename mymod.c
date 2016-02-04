@@ -15,16 +15,14 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define PCI_VENDOR_ID_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
+#define FIFO_ENTRIES 1024
+
 struct phys_region {
   phys_addr_t p_base;
   unsigned long len;
   unsigned int * k_base;
 };
 
-struct fifo_entry {
-  u32 command;
-  u32 value;
-};
 
 struct _fifo {
   // dma_addr_t p_base;
@@ -55,11 +53,14 @@ inline unsigned int K_READ_REG(unsigned int reg){
 }
 
 void fifo_init(void) {
-  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8192u, &kyouko3.fifo.p_base);
+  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8*FIFO_ENTRIES, &kyouko3.fifo.p_base);
   K_WRITE_REG(FIFO_START, kyouko3.fifo.p_base);
-  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8192u);
+  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8*FIFO_ENTRIES);
   kyouko3.fifo.head = 0;
   kyouko3.fifo.tail_cache = 0;
+  if (kyouko3.fifo.head >= FIFO_ENTRIES) {
+    kyouko3.fifo.head = 0;
+  }
 }
 
 
@@ -72,12 +73,11 @@ void fifo_flush(void) {
 }
 
 void fifo_write(u32 cmd, u32 val) {
+    printk(KERN_ALERT "FIFO_write fifo.head: %d\n", kyouko3.fifo.head);
+    printk(KERN_ALERT "ERR command, value: %x, %x", cmd, val);
   kyouko3.fifo.k_base[kyouko3.fifo.head].command = cmd;
   kyouko3.fifo.k_base[kyouko3.fifo.head].value = val;
   kyouko3.fifo.head++;
-  msleep(10);
-  printk("ft: %d fs:%d\n", K_READ_REG(FIFO_TAIL), K_READ_REG(FIFO_STATUS));
-  // fifo_flush();
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
@@ -144,7 +144,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         K_WRITE_REG(CONF_MODESET, 0);
 
         msleep(10);
-
+    
         fifo_write(CLEAR_COLOR, 0);
         fifo_write(CLEAR_COLOR + 0x0004, 0);
         fifo_write(CLEAR_COLOR + 0x0008, 0);
@@ -153,8 +153,6 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         fifo_write(RASTER_CLEAR, 3);
         fifo_write(RASTER_FLUSH, 0);
         fifo_flush();
-        // K_WRITE_REG(RASTER_FLUSH, 0);
-        // K_WRITE_REG(RASTER_CLEAR, 1);
 
         kyouko3.graphics_on = 1;
         printk(KERN_ALERT "Graphics ON\n");

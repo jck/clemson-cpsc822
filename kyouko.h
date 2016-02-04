@@ -1,4 +1,10 @@
 #include <linux/ioctl.h>
+#include <linux/types.h>
+
+struct fifo_entry {
+  __u32 command;
+  __u32 value;
+};
 
 // IOCTL
 #define VMODE _IOW(0xcc,0,unsigned long)
@@ -32,8 +38,9 @@
 
 #define VERTEX_COORD 0x5000
 #define VERTEX_COLOR 0x5010
+#define VERTEX_EMIT 0x3004
 
-#define COMMAND_PRINITIVE 0x3000
+#define COMMAND_PRIMITIVE 0x3000
 
 #define FIFO_START 0x1020
 #define FIFO_END 0x1024
