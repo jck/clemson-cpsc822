@@ -35,11 +35,13 @@ static inline void fifo_flush(){
 }
 
 void draw_line_fb() {
+  printf("Drawing line by writing to FB\n");
   for (int i=200*1024; i<201*1024; i++)
     U_WRITE_FB(i, 0xff0000);
 }
 
 void fifo_triangle() {
+  printf("Drawing triangle by queing FIFO cmds\n");
   float triangle [3][2][4] = {
     {{-0.5, -0.5, 0, 1.0}, {1.0, 0, 0, 0}},
     {{0.5, 0, 0, 1.0}, {0, 1.0, 0, 0}},
@@ -71,9 +73,10 @@ int main() {
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, 0x400000);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
-  // draw_line_fb();
+  draw_line_fb();
+  sleep(2);
   fifo_triangle();
-  sleep(5);
+  sleep(2);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
   close(kyouko3.fd);
   return 0;
