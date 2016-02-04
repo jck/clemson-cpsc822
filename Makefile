@@ -2,6 +2,7 @@ obj-m += mymod.o
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
 all: module user
+r: rmod ruser
 
 .PHONY: module
 module:
@@ -9,7 +10,7 @@ module:
 	$(MAKE) -C /home/jck/projects/822/build/linux M=$(PWD) modules
 
 user: user.c
-	gcc -o user user.c
+	gcc -std=gnu99 -o user user.c
 	scp user 822:
 
 .PHONY: rmod
