@@ -1,4 +1,4 @@
-obj-m += mymod.o
+obj-m += kyouko3.o
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
 all: module user
@@ -15,8 +15,8 @@ user: user.c
 
 .PHONY: rmod
 rmod: module
-	scp mymod.ko 822:
-	ssh 822 'rmmod mymod; insmod mymod.ko'
+	scp kyouko3.ko 822:
+	ssh 822 'rmmod kyouko3; insmod kyouko3.ko'
 
 .PHONY: ruser
 ruser: user
