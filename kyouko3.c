@@ -82,8 +82,9 @@ void fifo_write(u32 cmd, u32 val) {
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
-  kyouko3.control.k_base = ioremap(kyouko3.control.p_base, kyouko3.control.len);
-  kyouko3.fb.k_base = ioremap(kyouko3.fb.p_base, kyouko3.fb.len);
+  // ioremap_wc is faster than ioremap on some hardware
+  kyouko3.control.k_base = pci_ioremap_wc_bar(kyouko3.pdev, 1);
+  kyouko3.fb.k_base = pci_ioremap_wc_bar(kyouko3.pdev, 2);
   fifo_init();
   printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
