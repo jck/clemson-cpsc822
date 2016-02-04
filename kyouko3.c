@@ -203,6 +203,10 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   return pci_enable_device(pdev);
 }
 
+void kyouko3_remove(struct pci_dev *pdev) {
+	pci_disable_device(pdev);
+}
+
 struct pci_device_id kyouko3_dev_ids[] = {
   {PCI_DEVICE(PCI_VENDOR_ID_CCORSI, PCI_DEVICE_ID_CCORSI_KYOUKO3)},
   {0}
@@ -212,8 +216,7 @@ struct pci_driver kyouko3_pci_drv = {
   .name = "kyouko3_pci_drv",
   .id_table = kyouko3_dev_ids,
   .probe = kyouko3_probe,
-  .remove = NULL
-  // .remove = kyouko3_remove
+  .remove = kyouko3_remove
 };
 
 int kyouko3_init(void) {
