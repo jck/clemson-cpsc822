@@ -173,6 +173,12 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       printk(KERN_ALERT "FIFO_FLUSH\n");
       fifo_flush();
       break;
+    case BIND_DMA:
+      break;
+    case UNBIND_DMA:
+      break;
+    case START_DMA:
+      break;
   }
   return 0;
 }
