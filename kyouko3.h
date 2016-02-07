@@ -12,7 +12,13 @@ struct dma_req {
 };
 
 struct kyouko3_dma_hdr {
-  __u32 address:14;
+  __u32 stride:5;
+  __u32 w:1;
+  __u32 rgb:1;
+  __u32 unknown:5;
+  __u32 b12:1;
+  __u32 b13:1;
+
   __u32 count:10;
   __u32 opcode:8;
 };
@@ -66,3 +72,6 @@ struct kyouko3_dma_hdr {
 #define FIFO_HEAD 0x4010
 #define FIFO_TAIL 0x4014
 #define FIFO_STATUS 0x4008
+
+#define BUFA_ADDR 0x2000
+#define BUFA_CONF 0x2008
