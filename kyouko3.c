@@ -1,6 +1,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/module.h>
+#include <linux/mman.h>
 #include <linux/kernel.h>
 #include <linux/kernel_stat.h>
 #include <linux/fs.h>
@@ -16,6 +17,9 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
 #define FIFO_ENTRIES 1024
+
+#define DMA_BUFNUM 8
+#define DMA_BUFSIZE (124*1024)
 
 struct phys_region {
   phys_addr_t p_base;
@@ -33,6 +37,12 @@ struct _fifo {
   u32 tail_cache;
 };
 
+struct k3_dma_buf {
+  unsigned int * k_base;
+  unsigned long u_base;
+  dma_addr_t handle;
+} dma[DMA_BUFNUM];
+
 
 struct kyouko3_vars {
   struct phys_region control;
@@ -40,6 +50,8 @@ struct kyouko3_vars {
   bool graphics_on;
   struct _fifo fifo;
   struct pci_dev *pdev;
+  u32 fill;
+  u32 drain;
 } kyouko3;
 
 
@@ -101,6 +113,7 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   printk(KERN_ALERT "mmap\n");
   int ret = 0;
+  int vma_size = vma->vm_end - vma->vm_start;
 
   switch(vma->vm_pgoff<<PAGE_SHIFT) {
   case VM_PGOFF_CONTROL:
@@ -111,6 +124,9 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
     // Investigate it
     // ret = vm_iomap_memory(vma, kyouko3.fb.p_base>>PAGE_SHIFT, kyouko3.fb.len);
     ret = io_remap_pfn_range(vma, vma->vm_start, kyouko3.fb.p_base>>PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
+    break;
+  case VM_PGOFF_DMA:
+    ret = io_remap_pfn_range(vma, vma->vm_start, dma[kyouko3.fill].handle>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
     break;
   }
   return ret;
@@ -174,8 +190,23 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       fifo_flush();
       break;
     case BIND_DMA:
+      for (int i=0; i<DMA_BUFNUM; i++) {
+        kyouko3.fill = i;
+        dma[i].k_base = pci_alloc_consistent(kyouko3.pdev, DMA_BUFSIZE, &dma[i].handle);
+        dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
+      printk(KERN_ALERT "DMA U_ADDR: %lx\n", dma[i].u_base);
+      }
+      kyouko3.fill = 0;
+      kyouko3.drain = 0;
+      if (copy_to_user(arg, &dma[0].u_base, sizeof(u64))) {
+        printk(KERN_ALERT "ctu fail\n");
+      }
       break;
     case UNBIND_DMA:
+      for (int i=0; i<DMA_BUFNUM; i++) {
+        vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+        pci_free_consistent(kyouko3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
+      }
       break;
     case START_DMA:
       break;

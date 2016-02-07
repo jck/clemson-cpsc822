@@ -6,6 +6,17 @@ struct fifo_entry {
   __u32 value;
 };
 
+struct dma_req {
+	unsigned int *u_base;
+	__u32 count;
+};
+
+struct kyouko3_dma_hdr {
+  __u32 address:14;
+  __u32 count:10;
+  __u32 opcode:8;
+};
+
 // Page offsets for mmap
 #define VM_PGOFF_CONTROL 0
 #define VM_PGOFF_FB 0x80000000

@@ -34,6 +34,18 @@ static inline void fifo_flush(){
   ioctl(kyouko3.fd, FIFO_FLUSH, 0);
 }
 
+void bind_dma(struct dma_req *req) {
+  ioctl(kyouko3.fd, BIND_DMA, &req->u_base);
+}
+
+void start_dma(struct dma_req *req) {
+  ioctl(kyouko3.fd, START_DMA, req);
+}
+
+void unbind_dma(void) {
+  ioctl(kyouko3.fd, UNBIND_DMA, 0);
+}
+
 void draw_line_fb() {
   printf("Drawing line by writing to FB\n");
   for (int i=200*1024; i<201*1024; i++)
@@ -65,6 +77,31 @@ void fifo_triangle() {
   fifo_flush();
 }
 
+void dma_triangle() {
+  float triangle [3][6] = {
+    {0.5, -0.5, 0,  1.0, 0, 0},
+    {0.5, 0, 0, 0, 1.0, 0},
+    {0.125, 0.5, 0, 0, 0, 1.0},
+  };
+  struct kyouko3_dma_hdr hdr = {
+    .address = 0x1045,
+    .count = 3,
+    .opcode = 0x14
+  };
+  struct dma_req req;
+  bind_dma(&req);
+  printf("DMA u_base: %lx\n", req.u_base);
+  
+  // unsigned  int* buf = req.u_addr[];
+  // *buf = *(unsigned int *)&hdr;
+  // for(int i=0; i<3; i++) {
+  //   for (int j=0; j<6; j++){
+  //     *buf++ = *(unsigned int*) triangle[i][j];
+  //   }
+  // }
+
+}
+
 
 int main() {
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
@@ -73,9 +110,10 @@ int main() {
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
-  draw_line_fb();
+  // draw_line_fb();
   sleep(2);
-  fifo_triangle();
+  // fifo_triangle();
+  dma_triangle();
   sleep(2);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
   close(kyouko3.fd);
