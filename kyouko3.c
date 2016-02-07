@@ -134,6 +134,7 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
+  struct dma_req req;
 
   switch(cmd) {
     case VMODE:
@@ -209,6 +210,17 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       }
       break;
     case START_DMA:
+      if (copy_from_user(&req.count, (unsigned int*) arg, sizeof(unsigned int))) {
+        return -EFAULT;
+      }
+      // printk(KERN_ALERT "DMA HANDLE: %lx\n", dma[0].handle);
+      //   printk(KERN_ALERT "val %lx\n",  *(dma[0].k_base));
+      //   printk(KERN_ALERT "val %lx\n",  *(dma[0].k_base + 4));
+
+      fifo_write(BUFA_ADDR, dma[0].handle);
+      fifo_write(BUFA_CONF, req.count);
+      K_WRITE_REG(FIFO_HEAD, kyouko3.fifo.head);
+      printk(KERN_ALERT "cnt: %d\n", req.count);
       break;
   }
   return 0;
