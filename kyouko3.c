@@ -117,9 +117,6 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 }
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
-
-  float float_one = 1.0;
-  unsigned int int_float_one = *(unsigned int *)&float_one;
   struct fifo_entry entry;
 
   switch(cmd) {
