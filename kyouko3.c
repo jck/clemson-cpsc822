@@ -7,7 +7,7 @@
 #include <linux/cdev.h>
 #include <linux/pci.h>
 
-#include "kyouko.h"
+#include "kyouko3.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Keerthan Jaic");

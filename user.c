@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "kyouko.h"
+#include "kyouko3.h"
 
 struct u_kyouko_device {
   unsigned int *u_control_base;
