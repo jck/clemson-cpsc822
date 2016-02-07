@@ -6,6 +6,11 @@ struct fifo_entry {
   __u32 value;
 };
 
+// Page offsets for mmap
+#define VM_PGOFF_CONTROL 0
+#define VM_PGOFF_FB 0x80000000
+#define VM_PGOFF_DMA 0x40000000
+
 // IOCTL
 #define VMODE _IOW(0xcc,0,unsigned long)
 #define FIFO_QUEUE _IOWR(0XCC,3,unsigned long)

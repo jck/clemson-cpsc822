@@ -69,9 +69,9 @@ void fifo_triangle() {
 int main() {
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
   kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ|PROT_WRITE,
-      MAP_SHARED, kyouko3.fd, 0);
+      MAP_SHARED, kyouko3.fd, VM_PGOFF_CONTROL);
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
-      MAP_SHARED, kyouko3.fd, 0x400000);
+      MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
   draw_line_fb();
   sleep(2);
