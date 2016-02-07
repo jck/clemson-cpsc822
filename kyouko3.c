@@ -164,7 +164,9 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       break;
     case FIFO_QUEUE:
       printk(KERN_ALERT "FIFO_QUEUE\n");
-      copy_from_user(&entry, (struct fifo_entry*) arg, sizeof(struct fifo_entry));
+      if (copy_from_user(&entry, (struct fifo_entry*) arg, sizeof(struct fifo_entry))) {
+        return -EFAULT;
+      }
       fifo_write(entry.command, entry.value);
       break;
     case FIFO_FLUSH:
