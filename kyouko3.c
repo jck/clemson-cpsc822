@@ -29,9 +29,7 @@ struct phys_region {
 
 
 struct _fifo {
-  // dma_addr_t p_base;
   dma_addr_t p_base;
-  // u32 p_base;
   struct fifo_entry *k_base;
   u32 head;
   u32 tail_cache;
@@ -214,10 +212,6 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       if (copy_from_user(&req.count, (unsigned int*) arg, sizeof(unsigned int))) {
         return -EFAULT;
       }
-      // printk(KERN_ALERT "DMA HANDLE: %lx\n", dma[0].handle);
-      //   printk(KERN_ALERT "val %lx\n",  *(dma[0].k_base));
-      //   printk(KERN_ALERT "val %lx\n",  *(dma[0].k_base + 4));
-
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, req.count);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
