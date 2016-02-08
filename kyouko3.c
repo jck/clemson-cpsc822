@@ -1,4 +1,5 @@
 #include <linux/init.h>
+#include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/mman.h>
@@ -88,6 +89,18 @@ void fifo_write(u32 cmd, u32 val) {
   k3.fifo.k_base[k3.fifo.head].command = cmd;
   k3.fifo.k_base[k3.fifo.head].value = val;
   k3.fifo.head++;
+}
+
+irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
+  u32 iflags = K_READ_REG(INFO_STATUS);
+  printk(KERN_INFO "DMA ISR. Flags: %x\n", iflags);
+  K_WRITE_REG(INFO_STATUS, 0xf);
+  
+  // spurious interrupt
+  if ((iflags & 0x02) == 0){
+    return IRQ_NONE;
+  }
+  return IRQ_HANDLED;
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
@@ -194,11 +207,10 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         k3.fill = i;
         dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
         dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
-      printk(KERN_ALERT "DMA U_ADDR: %lx\n", dma[i].u_base);
       }
       k3.fill = 0;
       k3.drain = 0;
-      if (copy_to_user(arg, &dma[0].u_base, sizeof(u64))) {
+      if (copy_to_user((unsigned int*) arg, &dma[0].u_base, sizeof(u64))) {
         printk(KERN_ALERT "ctu fail\n");
       }
       break;

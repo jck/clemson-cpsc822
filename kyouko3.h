@@ -71,7 +71,7 @@ struct kyouko3_dma_hdr {
 #define FIFO_END 0x1024
 #define FIFO_HEAD 0x4010
 #define FIFO_TAIL 0x4014
-#define FIFO_STATUS 0x4008
+#define INFO_STATUS 0x4008
 
 #define BUFA_ADDR 0x2000
 #define BUFA_CONF 0x2008
