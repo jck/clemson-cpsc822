@@ -95,8 +95,8 @@ void fifo_write(u32 cmd, u32 val) {
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
   // ioremap_wc is faster than ioremap on some hardware
-  kyouko3.control.k_base = pci_ioremap_wc_bar(kyouko3.pdev, 1);
-  kyouko3.fb.k_base = pci_ioremap_wc_bar(kyouko3.pdev, 2);
+  kyouko3.control.k_base = ioremap_wc(kyouko3.control.p_base, kyouko3.control.len);
+  kyouko3.fb.k_base = ioremap_wc(kyouko3.fb.p_base, kyouko3.fb.len);
   fifo_init();
   printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
@@ -237,17 +237,15 @@ struct file_operations kyouko3_fops = {
 
 struct cdev kyouko3_dev;
 
-inline void get_region_info(struct pci_dev *pdev, int num, struct phys_region *region) {
-  region->p_base = pci_resource_start(pdev, num);
-  region->len = pci_resource_len(pdev, num);
-}
-
-
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   printk(KERN_ALERT "starting probe\n");
   kyouko3.pdev = pdev;
-  get_region_info(pdev, 1, &kyouko3.control);
-  get_region_info(pdev, 2, &kyouko3.fb);
+
+  kyouko3.control.p_base = pci_resource_start(pdev, 1);
+  kyouko3.control.len = pci_resource_len(pdev, 1);
+
+  kyouko3.fb.p_base = pci_resource_start(pdev, 2);
+  kyouko3.fb.len = pci_resource_len(pdev, 2);
 
   pci_set_master(pdev);
   return pci_enable_device(pdev);
