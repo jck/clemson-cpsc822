@@ -52,51 +52,51 @@ struct kyouko3_vars {
   struct pci_dev *pdev;
   u32 fill;
   u32 drain;
-} kyouko3;
+} k3;
 
 
 inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
-	*(kyouko3.control.k_base+(reg>>2)) = value;
+	*(k3.control.k_base+(reg>>2)) = value;
 }
 
 inline unsigned int K_READ_REG(unsigned int reg){
   rmb();
-	return *(kyouko3.control.k_base+(reg>>2));
+	return *(k3.control.k_base+(reg>>2));
 }
 
 void fifo_init(void) {
-  kyouko3.fifo.k_base =  pci_alloc_consistent(kyouko3.pdev, 8*FIFO_ENTRIES, &kyouko3.fifo.p_base);
-  K_WRITE_REG(FIFO_START, kyouko3.fifo.p_base);
-  K_WRITE_REG(FIFO_END, kyouko3.fifo.p_base + 8*FIFO_ENTRIES);
-  kyouko3.fifo.head = 0;
-  kyouko3.fifo.tail_cache = 0;
-  if (kyouko3.fifo.head >= FIFO_ENTRIES) {
-    kyouko3.fifo.head = 0;
+  k3.fifo.k_base =  pci_alloc_consistent(k3.pdev, 8*FIFO_ENTRIES, &k3.fifo.p_base);
+  K_WRITE_REG(FIFO_START, k3.fifo.p_base);
+  K_WRITE_REG(FIFO_END, k3.fifo.p_base + 8*FIFO_ENTRIES);
+  k3.fifo.head = 0;
+  k3.fifo.tail_cache = 0;
+  if (k3.fifo.head >= FIFO_ENTRIES) {
+    k3.fifo.head = 0;
   }
 }
 
 
 void fifo_flush(void) {
-  K_WRITE_REG(FIFO_HEAD, kyouko3.fifo.head);
-  while(kyouko3.fifo.tail_cache != kyouko3.fifo.head) {
-    kyouko3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
+  K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+  while(k3.fifo.tail_cache != k3.fifo.head) {
+    k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
     schedule();
   }
 }
 
 void fifo_write(u32 cmd, u32 val) {
-    printk(KERN_ALERT "FIFO_write fifo.head: %d\n", kyouko3.fifo.head);
+    printk(KERN_ALERT "FIFO_write fifo.head: %d\n", k3.fifo.head);
     printk(KERN_ALERT "ERR command, value: %x, %x", cmd, val);
-  kyouko3.fifo.k_base[kyouko3.fifo.head].command = cmd;
-  kyouko3.fifo.k_base[kyouko3.fifo.head].value = val;
-  kyouko3.fifo.head++;
+  k3.fifo.k_base[k3.fifo.head].command = cmd;
+  k3.fifo.k_base[k3.fifo.head].value = val;
+  k3.fifo.head++;
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_open\n");
   // ioremap_wc is faster than ioremap on some hardware
-  kyouko3.control.k_base = ioremap_wc(kyouko3.control.p_base, kyouko3.control.len);
-  kyouko3.fb.k_base = ioremap_wc(kyouko3.fb.p_base, kyouko3.fb.len);
+  k3.control.k_base = ioremap_wc(k3.control.p_base, k3.control.len);
+  k3.fb.k_base = ioremap_wc(k3.fb.p_base, k3.fb.len);
   fifo_init();
   printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
@@ -104,9 +104,9 @@ int kyouko3_open(struct inode *inode, struct file *fp) {
 
 int kyouko3_release(struct inode *inode, struct file *fp) {
   printk(KERN_ALERT "kyouko3_release\n");
-  iounmap(kyouko3.control.k_base);
-  iounmap(kyouko3.fb.k_base);
-  pci_free_consistent(kyouko3.pdev, 8192, kyouko3.fifo.k_base, kyouko3.fifo.p_base);
+  iounmap(k3.control.k_base);
+  iounmap(k3.fb.k_base);
+  pci_free_consistent(k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
   return 0;
 }
 
@@ -121,13 +121,13 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   vma->vm_pgoff = 0;
   switch(off) {
   case VM_PGOFF_CONTROL:
-    ret = vm_iomap_memory(vma, kyouko3.control.p_base, kyouko3.control.len);
+    ret = vm_iomap_memory(vma, k3.control.p_base, k3.control.len);
     break;
   case VM_PGOFF_FB:
-    ret = vm_iomap_memory(vma, kyouko3.fb.p_base, kyouko3.fb.len);
+    ret = vm_iomap_memory(vma, k3.fb.p_base, k3.fb.len);
     break;
   case VM_PGOFF_DMA:
-    ret = vm_iomap_memory(vma, dma[kyouko3.fill].handle, DMA_BUFSIZE);
+    ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
     break;
   }
   return ret;
@@ -170,13 +170,13 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         fifo_write(RASTER_FLUSH, 0);
         fifo_flush();
 
-        kyouko3.graphics_on = 1;
+        k3.graphics_on = 1;
         printk(KERN_ALERT "Graphics ON\n");
       }
 
       else if(arg == GRAPHICS_OFF) {
         K_WRITE_REG(CONFIG_REBOOT, 0);
-        kyouko3.graphics_on = 0;
+        k3.graphics_on = 0;
         printk(KERN_ALERT "Graphics OFF\n");
       }
       break;
@@ -193,13 +193,13 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       break;
     case BIND_DMA:
       for (int i=0; i<DMA_BUFNUM; i++) {
-        kyouko3.fill = i;
-        dma[i].k_base = pci_alloc_consistent(kyouko3.pdev, DMA_BUFSIZE, &dma[i].handle);
+        k3.fill = i;
+        dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
         dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
       printk(KERN_ALERT "DMA U_ADDR: %lx\n", dma[i].u_base);
       }
-      kyouko3.fill = 0;
-      kyouko3.drain = 0;
+      k3.fill = 0;
+      k3.drain = 0;
       if (copy_to_user(arg, &dma[0].u_base, sizeof(u64))) {
         printk(KERN_ALERT "ctu fail\n");
       }
@@ -207,7 +207,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
     case UNBIND_DMA:
       for (int i=0; i<DMA_BUFNUM; i++) {
         vm_munmap(dma[i].u_base, DMA_BUFSIZE);
-        pci_free_consistent(kyouko3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
+        pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
       }
       break;
     case START_DMA:
@@ -220,7 +220,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, req.count);
-      K_WRITE_REG(FIFO_HEAD, kyouko3.fifo.head);
+      K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
       printk(KERN_ALERT "cnt: %d\n", req.count);
       break;
   }
@@ -239,13 +239,13 @@ struct cdev kyouko3_dev;
 
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
   printk(KERN_ALERT "starting probe\n");
-  kyouko3.pdev = pdev;
+  k3.pdev = pdev;
 
-  kyouko3.control.p_base = pci_resource_start(pdev, 1);
-  kyouko3.control.len = pci_resource_len(pdev, 1);
+  k3.control.p_base = pci_resource_start(pdev, 1);
+  k3.control.len = pci_resource_len(pdev, 1);
 
-  kyouko3.fb.p_base = pci_resource_start(pdev, 2);
-  kyouko3.fb.len = pci_resource_len(pdev, 2);
+  k3.fb.p_base = pci_resource_start(pdev, 2);
+  k3.fb.len = pci_resource_len(pdev, 2);
 
   pci_set_master(pdev);
   return pci_enable_device(pdev);
