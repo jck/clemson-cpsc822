@@ -113,20 +113,21 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   printk(KERN_ALERT "mmap\n");
   int ret = 0;
-  int vma_size = vma->vm_end - vma->vm_start;
 
-  switch(vma->vm_pgoff<<PAGE_SHIFT) {
+  // vm_iomap_memory provides a simpler API than io_remap_pfn_range and reduces possibilities for bugs
+
+  // Offset is just used to choose regions, it isn't a real offset.
+  unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
+  vma->vm_pgoff = 0;
+  switch(off) {
   case VM_PGOFF_CONTROL:
     ret = vm_iomap_memory(vma, kyouko3.control.p_base, kyouko3.control.len);
     break;
   case VM_PGOFF_FB:
-    // vm_iomap_memory fails for the fb for some reason
-    // Investigate it
-    // ret = vm_iomap_memory(vma, kyouko3.fb.p_base>>PAGE_SHIFT, kyouko3.fb.len);
-    ret = io_remap_pfn_range(vma, vma->vm_start, kyouko3.fb.p_base>>PAGE_SHIFT, vma->vm_end - vma->vm_start, vma->vm_page_prot);
+    ret = vm_iomap_memory(vma, kyouko3.fb.p_base, kyouko3.fb.len);
     break;
   case VM_PGOFF_DMA:
-    ret = io_remap_pfn_range(vma, vma->vm_start, dma[kyouko3.fill].handle>>PAGE_SHIFT, vma_size, vma->vm_page_prot);
+    ret = vm_iomap_memory(vma, dma[kyouko3.fill].handle, DMA_BUFSIZE);
     break;
   }
   return ret;
