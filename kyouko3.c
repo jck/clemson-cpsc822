@@ -203,6 +203,14 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       fifo_flush();
       break;
     case BIND_DMA:
+      pr_info("BIND_DMA\n");
+      if (pci_enable_msi(k3.pdev)) {
+        pr_warn("pci_enable_msi failed\n");
+      }
+      if (request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED, "kyouku3 dma isr", &k3)) {
+        pr_warn("request_irq failed\n");
+      }
+      K_WRITE_REG(CONF_INTERRUPT, 0x02);
 
       for (int i=0; i<DMA_BUFNUM; i++) {
         k3.fill = i;
@@ -216,10 +224,14 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       }
       break;
     case UNBIND_DMA:
+      pr_info("UNBIND_DMA\n");
       for (int i=0; i<DMA_BUFNUM; i++) {
         vm_munmap(dma[i].u_base, DMA_BUFSIZE);
         pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
       }
+      K_WRITE_REG(CONF_INTERRUPT, 0);
+      free_irq(k3.pdev->irq, &k3);
+      pci_disable_msi(k3.pdev);
       break;
     case START_DMA:
       if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {

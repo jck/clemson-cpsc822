@@ -59,6 +59,7 @@ struct kyouko3_dma_hdr {
 
 #define CONF_ACCELERATION 0x1010
 #define CONF_MODESET 0x1008
+#define CONF_INTERRUPT 0x100c
 #define CONFIG_REBOOT 0x1000
 
 #define VERTEX_COORD 0x5000
