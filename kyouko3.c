@@ -1,6 +1,7 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/mman.h>
 #include <linux/kernel.h>
@@ -8,6 +9,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/pci.h>
+#include <linux/printk.h>
 
 #include "kyouko3.h"
 
@@ -84,8 +86,6 @@ void fifo_flush(void) {
 }
 
 void fifo_write(u32 cmd, u32 val) {
-    printk(KERN_ALERT "FIFO_write fifo.head: %d\n", k3.fifo.head);
-    printk(KERN_ALERT "ERR command, value: %x, %x", cmd, val);
   k3.fifo.k_base[k3.fifo.head].command = cmd;
   k3.fifo.k_base[k3.fifo.head].value = val;
   k3.fifo.head++;
@@ -93,7 +93,7 @@ void fifo_write(u32 cmd, u32 val) {
 
 irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   u32 iflags = K_READ_REG(INFO_STATUS);
-  printk(KERN_INFO "DMA ISR. Flags: %x\n", iflags);
+  pr_info("DMA ISR. Flags: %x\n", iflags);
   K_WRITE_REG(INFO_STATUS, 0xf);
   
   // spurious interrupt
@@ -104,17 +104,16 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
 }
 
 int kyouko3_open(struct inode *inode, struct file *fp) {
-  printk(KERN_ALERT "kyouko3_open\n");
+  pr_info("kyouko3_open\n");
   // ioremap_wc is faster than ioremap on some hardware
   k3.control.k_base = ioremap_wc(k3.control.p_base, k3.control.len);
   k3.fb.k_base = ioremap_wc(k3.fb.p_base, k3.fb.len);
   fifo_init();
-  printk(KERN_ALERT "RAM: %u\n", K_READ_REG(0x20));
   return 0;
 }
 
 int kyouko3_release(struct inode *inode, struct file *fp) {
-  printk(KERN_ALERT "kyouko3_release\n");
+  pr_info("kyouko3_release\n");
   iounmap(k3.control.k_base);
   iounmap(k3.fb.k_base);
   pci_free_consistent(k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
@@ -122,7 +121,7 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 }
 
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
-  printk(KERN_ALERT "mmap\n");
+  pr_info("mmap\n");
   int ret = 0;
 
   // vm_iomap_memory provides a simpler API than io_remap_pfn_range and reduces possibilities for bugs
@@ -153,7 +152,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
     case VMODE:
       if(arg == GRAPHICS_ON) {
 
-        printk(KERN_ALERT "Turning ON Graphics\n");
+        pr_info("Turning ON Graphics\n");
 
         K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
 
@@ -183,27 +182,28 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
         fifo_flush();
 
         k3.graphics_on = 1;
-        printk(KERN_ALERT "Graphics ON\n");
+        pr_info("Graphics ON\n");
       }
 
       else if(arg == GRAPHICS_OFF) {
         K_WRITE_REG(CONFIG_REBOOT, 0);
         k3.graphics_on = 0;
-        printk(KERN_ALERT "Graphics OFF\n");
+        pr_info("Graphics OFF\n");
       }
       break;
     case FIFO_QUEUE:
-      printk(KERN_ALERT "FIFO_QUEUE\n");
+      pr_info("FIFO_QUEUE\n");
       if (copy_from_user(&entry, argp, sizeof(struct fifo_entry))) {
         return -EFAULT;
       }
       fifo_write(entry.command, entry.value);
       break;
     case FIFO_FLUSH:
-      printk(KERN_ALERT "FIFO_FLUSH\n");
+      pr_info("FIFO_FLUSH\n");
       fifo_flush();
       break;
     case BIND_DMA:
+
       for (int i=0; i<DMA_BUFNUM; i++) {
         k3.fill = i;
         dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
@@ -212,7 +212,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       k3.fill = 0;
       k3.drain = 0;
       if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
-        printk(KERN_ALERT "ctu fail\n");
+        pr_info("ctu fail\n");
       }
       break;
     case UNBIND_DMA:
@@ -228,7 +228,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, req.count);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      printk(KERN_ALERT "cnt: %d\n", req.count);
+      pr_info("cnt: %d\n", req.count);
       break;
   }
   return 0;
@@ -245,7 +245,7 @@ struct file_operations kyouko3_fops = {
 struct cdev kyouko3_dev;
 
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id) {
-  printk(KERN_ALERT "starting probe\n");
+  pr_info("kyouko3 probe\n");
   k3.pdev = pdev;
 
   k3.control.p_base = pci_resource_start(pdev, 1);
@@ -275,7 +275,7 @@ struct pci_driver kyouko3_pci_drv = {
 };
 
 int kyouko3_init(void) {
-  printk(KERN_ALERT "kyouko3_init\n");
+  pr_info("kyouko3_init");
   cdev_init(&kyouko3_dev, &kyouko3_fops);
   cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
   return pci_register_driver(&kyouko3_pci_drv);
@@ -284,7 +284,7 @@ int kyouko3_init(void) {
 void kyouko3_exit(void) {
   cdev_del(&kyouko3_dev);
   pci_unregister_driver(&kyouko3_pci_drv);
-  printk(KERN_ALERT "kyouko3_exit\n");
+  pr_info("kyouko3_exit\n");
 }
 
 module_init(kyouko3_init);
