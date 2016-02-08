@@ -147,6 +147,7 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
   struct dma_req req;
+	void __user *argp = (void __user *)arg;
 
   switch(cmd) {
     case VMODE:
@@ -193,7 +194,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       break;
     case FIFO_QUEUE:
       printk(KERN_ALERT "FIFO_QUEUE\n");
-      if (copy_from_user(&entry, (struct fifo_entry*) arg, sizeof(struct fifo_entry))) {
+      if (copy_from_user(&entry, argp, sizeof(struct fifo_entry))) {
         return -EFAULT;
       }
       fifo_write(entry.command, entry.value);
@@ -210,7 +211,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       }
       k3.fill = 0;
       k3.drain = 0;
-      if (copy_to_user((unsigned int*) arg, &dma[0].u_base, sizeof(u64))) {
+      if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
         printk(KERN_ALERT "ctu fail\n");
       }
       break;
@@ -221,7 +222,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       }
       break;
     case START_DMA:
-      if (copy_from_user(&req.count, (unsigned int*) arg, sizeof(unsigned int))) {
+      if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
         return -EFAULT;
       }
       fifo_write(BUFA_ADDR, dma[0].handle);
