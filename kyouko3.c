@@ -24,6 +24,8 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define DMA_BUFNUM 8
 #define DMA_BUFSIZE (124*1024)
 
+DECLARE_WAIT_QUEUE_HEAD(dma_snooze);//, fill != drain)
+
 struct phys_region {
   phys_addr_t p_base;
   unsigned long len;
@@ -147,10 +149,23 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 
 void initiate_transfer(unsigned long size)
 {
+    unsigned long flags;
+    local_irq_save(flags);
+    if (k3.fill == k3.drain)
+    {
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, req.count);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
       pr_info("cnt: %d\n", req.count);
+        return;
+    }
+    k3.fill = (k3.fill + 1) % DMA_BUFNUM;
+    if (k3.fill == k3.drain)
+    {
+        wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
+    }
+    local_irq_restore(flags);
+    return;
 }
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
