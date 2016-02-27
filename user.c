@@ -212,7 +212,7 @@ int main() {
 //  sleep(2);
 
   //BIND_DMA
-  unsigned long arg;
+  unsigned long arg = 0;
   ioctl(kyouko3.fd, BIND_DMA, &arg);
   arg = dma_triangle(arg);
   arg = dma_triangle2(arg);
