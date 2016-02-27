@@ -174,6 +174,7 @@ void initiate_transfer(unsigned long size)
     printk(KERN_ALERT "Initiate transfer"); 
     if (k3.fill == k3.drain)
     {
+      k3.fill = (k3.fill + 1) % DMA_BUFNUM;
       printk(KERN_ALERT "k3.fill == k3.drain"); 
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
