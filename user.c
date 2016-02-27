@@ -78,9 +78,8 @@ void fifo_triangle() {
   fifo_flush();
 }
 
-void dma_triangle() {
+unsigned long dma_triangle(unsigned long arg) {
   printf("Drawing triangle using DMA\n");
-  unsigned long arg;
   float triangle [3][6] = {
     {1.0,0,0,0.5,0.5,0},
     {0,1.0,0, 0.5,0,0},
@@ -109,15 +108,15 @@ void dma_triangle() {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  ioctl(kyouko3.fd, START_DMA, &arg);
+  unsigned long next_addr = ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
+  return next_addr;
 
 }
 
-void rand_dma_triangle() {
+unsigned long rand_dma_triangle(unsigned long arg) {
   printf("Drawing triangle using DMA\n");
-  unsigned long arg;
   float triangle [3][6] = {
     {1.0,0,0,0.5,0.5,0},
     {0,1.0,0, 0.5,0,0},
@@ -154,10 +153,10 @@ void rand_dma_triangle() {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  ioctl(kyouko3.fd, START_DMA, &arg);
+  unsigned long next_addr = ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-
+  return next_addr;
 }
 
 
@@ -178,15 +177,16 @@ int main() {
 //  sleep(2);
 
   //BIND_DMA
+  unsigned long arg;
   ioctl(kyouko3.fd, BIND_DMA, &arg);
-  //dma_triangle();
+  arg = dma_triangle(arg);
   fprintf(fp, "dma_triangle\n");
   //sleep(2);
   fprintf(fp, "DMA_Triangle complete\n");
   for (int i = 0; i < 5; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
-    rand_dma_triangle();
+    arg = rand_dma_triangle(arg);
     sleep(1);
   }
   // UNBIND_DMA

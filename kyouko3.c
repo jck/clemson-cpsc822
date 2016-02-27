@@ -108,14 +108,14 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   empty = k3.fill == k3.drain;
   if (!empty)
   {
-    size = (kyouko3_dma_hdr*)(dma[k3.drain].k_base);
+    size = ((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
     fifo_write(BUFA_ADDR, dma[k3.drain].handle);
     fifo_write(BUFA_CONF, size);
     K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
   }
   if (full)
   {
-    wake_up_interruptable (&dma_snooze);
+    wake_up_interruptible (&dma_snooze);
   }
   // if not-spurious, then 
   return IRQ_HANDLED;
@@ -189,7 +189,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct dma_req req;
   void __user *argp = (void __user *)arg;
   int i;
-  int ret;
+  //int ret;
 
   switch(cmd) {
     case VMODE:
