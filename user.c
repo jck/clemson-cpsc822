@@ -215,9 +215,10 @@ int main() {
   unsigned long arg = 0;
   ioctl(kyouko3.fd, BIND_DMA, &arg);
   arg = dma_triangle(arg);
+  sleep(2);
   arg = dma_triangle2(arg);
+  sleep(2);
   fprintf(fp, "dma_triangle\n");
-  //sleep(2);
   fprintf(fp, "DMA_Triangle complete\n");
   /*
   for (int i = 0; i < 5; i++)
