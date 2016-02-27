@@ -156,7 +156,7 @@ void initiate_transfer(unsigned long size)
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      pr_info("cnt: %d\n", req.count);
+      pr_info("cnt: %ld\n", size);
       return;
     }
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
