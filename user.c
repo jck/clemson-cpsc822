@@ -117,6 +117,54 @@ void dma_triangle() {
 
 }
 
+void rand_dma_triangle() {
+  printf("Drawing triangle using DMA\n");
+  unsigned long arg;
+  float triangle [3][6] = {
+    {1.0,0,0,0.5,0.5,0},
+    {0,1.0,0, 0.5,0,0},
+    {0,0,1.0,0.125,0.5,0},
+  };
+  for (int i = 0; i < 3; i++)
+  {
+        for (int j = 0; j < 6; j++)
+        {
+            triangle[i][j] = rand()/RAND_MAX;
+        }
+  }
+
+  struct kyouko3_dma_hdr hdr = {
+    .stride = 5,
+    .rgb = 1,
+    .b12 = 1,
+    .count = 3,
+    .opcode = 0x14
+  };
+  printf("DMA hdr: %u\n", hdr);
+  struct dma_req req;
+  // bind_dma(&req);
+  ioctl(kyouko3.fd, BIND_DMA, &arg);
+  printf("DMA u_base: %lx\n", arg);
+  
+  unsigned  int* buf = (unsigned int *)arg;
+
+  unsigned long c = 0;
+  buf[c++] = *(unsigned int*)&hdr;
+  for(int i=0; i<3; i++) {
+    for (int j=0; j<6; j++){
+      buf[c++] = *(unsigned int*)&triangle[i][j];
+    }
+  }
+  // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
+  arg = c*4;
+  ioctl(kyouko3.fd, START_DMA, &arg);
+  fifo_queue(RASTER_FLUSH, 0);
+  fifo_flush();
+  sleep(2);
+  unbind_dma();
+
+}
+
 
 int main() {
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
@@ -131,6 +179,12 @@ int main() {
 //  sleep(2);
   dma_triangle();
   sleep(2);
+  for (int i = 0; i < 10; i++)
+  {
+    rand_dma_triangle()
+    sleep(1);
+  }
+
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
   close(kyouko3.fd);
   return 0;
