@@ -163,7 +163,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   {
         for (int j = 3; j < 5; j++)
         {
-            triangle[i][j] = ((float)rand())/RAND_MAX;
+            triangle[i][j] = ((float)rand())/(RAND_MAX/2) - 1;
         }
   }
 
@@ -216,19 +216,19 @@ int main() {
   //BIND_DMA
   unsigned long arg = 0;
   ioctl(kyouko3.fd, BIND_DMA, &arg);
-  arg = dma_triangle(arg);
-  sleep(2);
-  arg = dma_triangle2(arg);
-  sleep(2);
+  //arg = dma_triangle(arg);
+  //sleep(2);
+  //arg = dma_triangle2(arg);
+  //sleep(2);
   fprintf(fp, "dma_triangle\n");
   fprintf(fp, "DMA_Triangle complete\n");
-  /*
-  for (int i = 0; i < 5; i++)
+  
+  for (int i = 0; i < 20; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
-    sleep(1);
-  }*/
+  }
+  sleep(15);
   // UNBIND_DMA
   unbind_dma();
   
