@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "kyouko3.h"
 
@@ -167,6 +168,8 @@ void rand_dma_triangle() {
 
 
 int main() {
+  FILE* fp = fopen("runlog", 'w');
+
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
   kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, VM_PGOFF_CONTROL);
@@ -179,13 +182,17 @@ int main() {
 //  sleep(2);
   dma_triangle();
   sleep(2);
-  for (int i = 0; i < 10; i++)
+  fprintf(fp, "DMA_Triangle complete\n");
+  for (int i = 0; i < 5; i++)
   {
-    rand_dma_triangle()
+    fprintf(fp, "rand_triangle %d\n", i);
+    rand_dma_triangle();
     sleep(1);
   }
-
+  fprintf(fp, "triangle done\n");
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
+  fprintf(fp, "VMODE_OFF\n");
+  close(fp);
   close(kyouko3.fd);
   return 0;
 }
