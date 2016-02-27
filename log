@@ -1,0 +1,14 @@
+/root/dev/822/kyouko3.c: In function ‘dma_isr’:
+/root/dev/822/kyouko3.c:111:14: error: ‘kyouko3_dma_hdr’ undeclared (first use in this function)
+     size = ((kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
+              ^
+/root/dev/822/kyouko3.c:111:14: note: each undeclared identifier is reported only once for each function it appears in
+/root/dev/822/kyouko3.c:111:30: error: expected expression before ‘)’ token
+     size = ((kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
+                              ^
+/root/dev/822/kyouko3.c:118:5: error: implicit declaration of function ‘wake_up_interruptable’ [-Werror=implicit-function-declaration]
+     wake_up_interruptable (&dma_snooze);
+     ^
+cc1: some warnings being treated as errors
+make[2]: *** [/root/dev/822/kyouko3.o] Error 1
+make[1]: *** [_module_/root/dev/822] Error 2
