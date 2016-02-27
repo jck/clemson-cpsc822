@@ -155,12 +155,15 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   vma->vm_pgoff = 0;
   switch(off) {
   case VM_PGOFF_CONTROL:
+    printk(KERN_ALERT "k3.control.p_base mmap");
     ret = vm_iomap_memory(vma, k3.control.p_base, k3.control.len);
     break;
   case VM_PGOFF_FB:
+    printk(KERN_ALERT "k3.fb.p_base mmap");
     ret = vm_iomap_memory(vma, k3.fb.p_base, k3.fb.len);
     break;
   case VM_PGOFF_DMA:
+    printk(KERN_ALERT "dma mmap");
     ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
     break;
   }
