@@ -92,6 +92,9 @@ void fifo_write(u32 cmd, u32 val) {
 }
 
 irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
+  int full;
+  int empty;
+  int size;
   u32 iflags = K_READ_REG(INFO_STATUS);
   pr_info("DMA ISR. Flags: %x\n", iflags);
   K_WRITE_REG(INFO_STATUS, 0xf);
@@ -100,7 +103,20 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   if ((iflags & 0x02) == 0){
     return IRQ_NONE;
   }
-
+  full = k3.fill == k3.drain;
+  k3.drain = (k3.drain + 1) % NUM_BUFFS;
+  empty = k3.fill == k3.drain;
+  if (!empty)
+  {
+    size = ((dma_hdr*)(dma[k3.drain].k_base))->count;
+    fifo_write(BUFA_ADDR, dma[k3.drain].handle);
+    fifo_write(BUFA_CONF, size);
+    K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+  }
+  if (full)
+  {
+    wake_up_interruptable (&dma_snooze);
+  }
   // if not-spurious, then 
   return IRQ_HANDLED;
 }
@@ -152,7 +168,7 @@ void initiate_transfer(unsigned long size)
     local_irq_save(flags);
     if (k3.fill == k3.drain)
     {
-      fifo_write(BUFA_ADDR, dma[0].handle);
+      fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
       local_irq_restore(flags);
