@@ -109,10 +109,10 @@ unsigned long dma_triangle(unsigned long arg) {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  unsigned long next_addr = ioctl(kyouko3.fd, START_DMA, &arg);
+  ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-  return next_addr;
+  return arg;
 }
 
 unsigned long dma_triangle2(unsigned long arg) {
@@ -146,10 +146,10 @@ unsigned long dma_triangle2(unsigned long arg) {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  unsigned long next_addr = ioctl(kyouko3.fd, START_DMA, &arg);
+  ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-  return next_addr;
+  return arg;
 }
 
 unsigned long rand_dma_triangle(unsigned long arg) {
@@ -190,10 +190,10 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  unsigned long next_addr = ioctl(kyouko3.fd, START_DMA, &arg);
+  ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-  return next_addr;
+  return arg;
 }
 
 
