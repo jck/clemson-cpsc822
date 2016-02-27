@@ -155,13 +155,14 @@ void initiate_transfer(unsigned long size)
       fifo_write(BUFA_ADDR, dma[0].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+      local_irq_restore(flags);
       pr_info("cnt: %ld\n", size);
       return;
     }
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     if (k3.fill == k3.drain)
     {
-        //wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
+        wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
     }
     local_irq_restore(flags);
     return;
