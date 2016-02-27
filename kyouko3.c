@@ -148,9 +148,9 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 void initiate_transfer(unsigned long size)
 {
       fifo_write(BUFA_ADDR, dma[0].handle);
-      fifo_write(BUFA_CONF, req.count);
+      fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      pr_info("cnt: %d\n", req.count);
+      pr_info("cnt: %ld\n", size);
 }
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
