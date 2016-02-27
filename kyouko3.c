@@ -1,7 +1,6 @@
+#include <linux/wait.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
 #include <linux/delay.h>
-#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/mman.h>
 #include <linux/kernel.h>
@@ -9,7 +8,6 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/pci.h>
-#include <linux/printk.h>
 
 #include "kyouko3.h"
 
@@ -24,7 +22,7 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define DMA_BUFNUM 8
 #define DMA_BUFSIZE (124*1024)
 
-DECLARE_WAIT_QUEUE_HEAD(dma_snooze);//, fill != drain)
+DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 
 struct phys_region {
   phys_addr_t p_base;
@@ -125,13 +123,14 @@ int kyouko3_release(struct inode *inode, struct file *fp) {
 }
 
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
-  pr_info("mmap\n");
   int ret = 0;
+  unsigned long off;
+  pr_info("mmap\n");
 
   // vm_iomap_memory provides a simpler API than io_remap_pfn_range and reduces possibilities for bugs
 
   // Offset is just used to choose regions, it isn't a real offset.
-  unsigned long off = vma->vm_pgoff << PAGE_SHIFT;
+  off = vma->vm_pgoff << PAGE_SHIFT;
   vma->vm_pgoff = 0;
   switch(off) {
   case VM_PGOFF_CONTROL:
@@ -162,7 +161,7 @@ void initiate_transfer(unsigned long size)
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     if (k3.fill == k3.drain)
     {
-        wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
+        //wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
     }
     local_irq_restore(flags);
     return;
@@ -172,6 +171,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
   struct dma_req req;
 	void __user *argp = (void __user *)arg;
+ int i;
 
   switch(cmd) {
     case VMODE:
@@ -237,7 +237,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           }
           K_WRITE_REG(CONF_INTERRUPT, 0x02);
 
-          for (int i=0; i<DMA_BUFNUM; i++) {
+          for (i=0; i<DMA_BUFNUM; i++) {
             k3.fill = i;
             dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
             dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
@@ -250,7 +250,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       break;
     case UNBIND_DMA:
           pr_info("UNBIND_DMA\n");
-          for (int i=0; i<DMA_BUFNUM; i++) {
+          for (i=0; i<DMA_BUFNUM; i++) {
             vm_munmap(dma[i].u_base, DMA_BUFSIZE);
             pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
           }
