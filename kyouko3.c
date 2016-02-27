@@ -20,7 +20,7 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define FIFO_ENTRIES 1024
 
 #define DMA_BUFNUM 8
-#define DMA_BUFSIZE (124*1024)
+#define DMA_BUFSIZE 124000u//(124*1024)
 
 DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 
@@ -270,9 +270,9 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
             dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
             dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
           }
-          k3.fill = 1;//0;
-          k3.drain = 1;//0; //change line below me too
-          if (copy_to_user(argp, &dma[1].u_base, sizeof(unsigned long))) {
+          k3.fill = 0;
+          k3.drain = 0; //change line below me too
+          if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
           printk(KERN_ALERT "bind_dma"); 
