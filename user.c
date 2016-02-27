@@ -125,10 +125,10 @@ int main() {
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
-  draw_line_fb();
-  sleep(2);
-  fifo_triangle();
-  sleep(2);
+//  draw_line_fb();
+//  sleep(2);
+//  fifo_triangle();
+//  sleep(2);
   dma_triangle();
   sleep(2);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
