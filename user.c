@@ -112,7 +112,6 @@ void dma_triangle() {
   ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-  sleep(2);
 
 }
 
@@ -128,7 +127,7 @@ void rand_dma_triangle() {
   {
         for (int j = 0; j < 6; j++)
         {
-            triangle[i][j] = rand()/RAND_MAX;
+            triangle[i][j] = ((float)rand())/RAND_MAX;
         }
   }
 
@@ -158,7 +157,6 @@ void rand_dma_triangle() {
   ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
-  sleep(2);
 
 }
 
@@ -181,9 +179,9 @@ int main() {
 
   //BIND_DMA
   ioctl(kyouko3.fd, BIND_DMA, &arg);
-  dma_triangle();
+  //dma_triangle();
   fprintf(fp, "dma_triangle\n");
-  sleep(2);
+  //sleep(2);
   fprintf(fp, "DMA_Triangle complete\n");
   for (int i = 0; i < 5; i++)
   {
