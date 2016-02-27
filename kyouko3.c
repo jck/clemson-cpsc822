@@ -105,6 +105,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
     printk(KERN_ALERT "Spurious interrupt"); 
     return IRQ_NONE;
   }
+  printk(KERN_ALERT "k3.fill = %d, k3.drain = %d", k3.fill, k3.drain);
   full = k3.fill == k3.drain;
   k3.drain = (k3.drain + 1) % DMA_BUFNUM;
   empty = k3.fill == k3.drain;
@@ -287,6 +288,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           printk(KERN_ALERT "unbind_dma"); 
       break;
     case START_DMA:
+          printk(KERN_ALERT "start_dma"); 
           if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
             return -EFAULT;
           }
@@ -294,7 +296,6 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           if (copy_to_user(argp, &dma[k3.fill].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
-          printk(KERN_ALERT "start_dma"); 
       break;
   }
   return 0;
