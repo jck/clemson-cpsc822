@@ -100,6 +100,8 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   if ((iflags & 0x02) == 0){
     return IRQ_NONE;
   }
+
+  // if not-spurious, then 
   return IRQ_HANDLED;
 }
 
@@ -141,6 +143,14 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
     break;
   }
   return ret;
+}
+
+void initiate_transfer(unsigned long size)
+{
+      fifo_write(BUFA_ADDR, dma[0].handle);
+      fifo_write(BUFA_CONF, req.count);
+      K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+      pr_info("cnt: %d\n", req.count);
 }
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
@@ -203,44 +213,41 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       fifo_flush();
       break;
     case BIND_DMA:
-      pr_info("BIND_DMA\n");
-      if (pci_enable_msi(k3.pdev)) {
-        pr_warn("pci_enable_msi failed\n");
-      }
-      if (request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED, "kyouku3 dma isr", &k3)) {
-        pr_warn("request_irq failed\n");
-      }
-      K_WRITE_REG(CONF_INTERRUPT, 0x02);
+          pr_info("BIND_DMA\n");
+          if (pci_enable_msi(k3.pdev)) {
+            pr_warn("pci_enable_msi failed\n");
+          }
+          if (request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED, "kyouku3 dma isr", &k3)) {
+            pr_warn("request_irq failed\n");
+          }
+          K_WRITE_REG(CONF_INTERRUPT, 0x02);
 
-      for (int i=0; i<DMA_BUFNUM; i++) {
-        k3.fill = i;
-        dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
-        dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
-      }
-      k3.fill = 0;
-      k3.drain = 0;
-      if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
-        pr_info("ctu fail\n");
-      }
+          for (int i=0; i<DMA_BUFNUM; i++) {
+            k3.fill = i;
+            dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
+            dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
+          }
+          k3.fill = 0;
+          k3.drain = 0;
+          if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
+            pr_info("ctu fail\n");
+          }
       break;
     case UNBIND_DMA:
-      pr_info("UNBIND_DMA\n");
-      for (int i=0; i<DMA_BUFNUM; i++) {
-        vm_munmap(dma[i].u_base, DMA_BUFSIZE);
-        pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
-      }
-      K_WRITE_REG(CONF_INTERRUPT, 0);
-      free_irq(k3.pdev->irq, &k3);
-      pci_disable_msi(k3.pdev);
+          pr_info("UNBIND_DMA\n");
+          for (int i=0; i<DMA_BUFNUM; i++) {
+            vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+            pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
+          }
+          K_WRITE_REG(CONF_INTERRUPT, 0);
+          free_irq(k3.pdev->irq, &k3);
+          pci_disable_msi(k3.pdev);
       break;
     case START_DMA:
-      if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
-        return -EFAULT;
-      }
-      fifo_write(BUFA_ADDR, dma[0].handle);
-      fifo_write(BUFA_CONF, req.count);
-      K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      pr_info("cnt: %d\n", req.count);
+          if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
+            return -EFAULT;
+          }
+          initiate_transfer(req.count);
       break;
   }
   return 0;
