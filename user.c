@@ -96,7 +96,8 @@ unsigned long dma_triangle(unsigned long arg) {
   struct dma_req req;
   // bind_dma(&req);
   printf("DMA u_base: %lx\n", arg);
-  
+ 
+  fprintf("dma triangle: %x\n", arg); 
   unsigned  int* buf = (unsigned int *)arg;
 
   unsigned long c = 0;
@@ -133,6 +134,7 @@ unsigned long dma_triangle2(unsigned long arg) {
   // bind_dma(&req);
   printf("DMA u_base: %lx\n", arg);
   
+  fprintf("dma triangle2: %x\n", arg); 
   unsigned  int* buf = (unsigned int *)arg;
 
   unsigned long c = 0;
