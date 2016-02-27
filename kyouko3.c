@@ -98,7 +98,8 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   u32 iflags = K_READ_REG(INFO_STATUS);
   pr_info("DMA ISR. Flags: %x\n", iflags);
   K_WRITE_REG(INFO_STATUS, 0xf);
-  
+ 
+  printk(KERN_ALERT "INterrupt handler."); 
   // spurious interrupt
   if ((iflags & 0x02) == 0){
     return IRQ_NONE;
@@ -190,6 +191,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   void __user *argp = (void __user *)arg;
   int i;
   //int ret;
+  printk(KERN_ALERT "ioctl called."); 
 
   switch(cmd) {
     case VMODE:
