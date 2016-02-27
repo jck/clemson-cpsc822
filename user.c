@@ -168,7 +168,7 @@ void rand_dma_triangle() {
 
 
 int main() {
-  FILE* fp = fopen("runlog", 'w');
+  FILE* fp = fopen("runlog", "w");
 
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
   kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ|PROT_WRITE,
@@ -192,7 +192,7 @@ int main() {
   fprintf(fp, "triangle done\n");
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
   fprintf(fp, "VMODE_OFF\n");
-  close(fp);
+  fclose(fp);
   close(kyouko3.fd);
   return 0;
 }
