@@ -96,7 +96,6 @@ void dma_triangle() {
   printf("DMA hdr: %u\n", hdr);
   struct dma_req req;
   // bind_dma(&req);
-  ioctl(kyouko3.fd, BIND_DMA, &arg);
   printf("DMA u_base: %lx\n", arg);
   
   unsigned  int* buf = (unsigned int *)arg;
@@ -114,7 +113,6 @@ void dma_triangle() {
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
   sleep(2);
-  unbind_dma();
 
 }
 
@@ -144,7 +142,6 @@ void rand_dma_triangle() {
   printf("DMA hdr: %u\n", hdr);
   struct dma_req req;
   // bind_dma(&req);
-  ioctl(kyouko3.fd, BIND_DMA, &arg);
   printf("DMA u_base: %lx\n", arg);
   
   unsigned  int* buf = (unsigned int *)arg;
@@ -162,7 +159,6 @@ void rand_dma_triangle() {
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
   sleep(2);
-  unbind_dma();
 
 }
 
@@ -182,6 +178,9 @@ int main() {
 //  sleep(2);
 //  fifo_triangle();
 //  sleep(2);
+
+  //BIND_DMA
+  ioctl(kyouko3.fd, BIND_DMA, &arg);
   dma_triangle();
   fprintf(fp, "dma_triangle\n");
   sleep(2);
@@ -192,6 +191,10 @@ int main() {
     rand_dma_triangle();
     sleep(1);
   }
+  // UNBIND_DMA
+  unbind_dma();
+  
+  
   fprintf(fp, "triangle done\n");
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
   fprintf(fp, "VMODE_OFF\n");
