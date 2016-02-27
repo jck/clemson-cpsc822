@@ -99,9 +99,10 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   pr_info("DMA ISR. Flags: %x\n", iflags);
   K_WRITE_REG(INFO_STATUS, 0xf);
  
-  printk(KERN_ALERT "INterrupt handler."); 
+  printk(KERN_ALERT "Interrupt handler."); 
   // spurious interrupt
   if ((iflags & 0x02) == 0){
+    printk(KERN_ALERT "Spurious interrupt"); 
     return IRQ_NONE;
   }
   full = k3.fill == k3.drain;
@@ -109,6 +110,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   empty = k3.fill == k3.drain;
   if (!empty)
   {
+    printk(KERN_ALERT "DMA Queue not empty in handler"); 
     size = ((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
     fifo_write(BUFA_ADDR, dma[k3.drain].handle);
     fifo_write(BUFA_CONF, size);
@@ -116,6 +118,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   }
   if (full)
   {
+    printk(KERN_ALERT "DMA Queue full in handler"); 
     wake_up_interruptible (&dma_snooze);
   }
   // if not-spurious, then 
@@ -167,8 +170,10 @@ void initiate_transfer(unsigned long size)
 {
     unsigned long flags;
     local_irq_save(flags);
+    printk(KERN_ALERT "Initiate transfer"); 
     if (k3.fill == k3.drain)
     {
+      printk(KERN_ALERT "k3.fill == k3.drain"); 
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
@@ -179,6 +184,7 @@ void initiate_transfer(unsigned long size)
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     if (k3.fill == k3.drain)
     {
+        printk(KERN_ALERT "Putting user to sleep"); 
         wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
     }
     local_irq_restore(flags);
@@ -267,6 +273,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
+          printk(KERN_ALERT "bind_dma"); 
       break;
     case UNBIND_DMA:
           pr_info("UNBIND_DMA\n");
@@ -277,6 +284,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           K_WRITE_REG(CONF_INTERRUPT, 0);
           free_irq(k3.pdev->irq, &k3);
           pci_disable_msi(k3.pdev);
+          printk(KERN_ALERT "unbind_dma"); 
       break;
     case START_DMA:
           if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
@@ -286,6 +294,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           if (copy_to_user(argp, &dma[k3.fill].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
+          printk(KERN_ALERT "start_dma"); 
       break;
   }
   return 0;
