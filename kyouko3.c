@@ -8,6 +8,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/pci.h>
+#include <linux/spinlock.h>
 
 #include "kyouko3.h"
 
@@ -173,7 +174,8 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
 void initiate_transfer(unsigned long size)
 {
     unsigned long flags;
-    local_irq_save(flags);
+    spin_lock_irqsave(&dma_snooze.lock, flags);
+    //local_irq_save(flags);
     printk(KERN_ALERT "Initiate transfer"); 
     if (k3.fill == k3.drain)
     {
@@ -182,7 +184,7 @@ void initiate_transfer(unsigned long size)
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      local_irq_restore(flags);
+      spin_unlock_irqrestore(&dma_snooze.lock, flags);
       pr_info("cnt: %ld\n", size);
       return;
     }
@@ -190,9 +192,10 @@ void initiate_transfer(unsigned long size)
     if (k3.fill == k3.drain)
     {
         printk(KERN_ALERT "Putting user to sleep"); 
-        wait_event_interruptible(dma_snooze, k3.fill != k3.drain);
+        wait_event_interruptible(dma_snooze.lock, k3.fill != k3.drain);
     }
-    local_irq_restore(flags);
+    spin_unlock_irqrestore(&dma_snooze.lock, flags);
+    //local_irq_restore(flags);
     return;
 }
 
@@ -278,7 +281,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
-          printk(KERN_ALERT "bind_dma"); 
+	  printk(KERN_ALERT "bind_dma"); 
       break;
     case UNBIND_DMA:
           pr_info("UNBIND_DMA\n");
