@@ -165,7 +165,19 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   unsigned long c = 0;
   unsigned  int* buf = (unsigned int *)arg;
   printf("DMA u_base: %lx\n", arg);
-  while (c < DMA_BUFSIZE)
+  struct kyouko3_dma_hdr hdr = {
+	.stride = 5,
+	.rgb = 1,
+	.b12 = 1,
+	.count = 3,
+	.opcode = 0x14
+  };
+  struct dma_req req
+  // bind_dma(&req);
+  printf("DMA hdr: %u\n", hdr);
+  buf[c] = *(unsigned int*)&hdr;
+  c++;
+  while (c * 4 < DMA_BUFSIZE)
   {
       vertices += 3;
       for (int i = 0; i < 3; i++)
@@ -175,21 +187,6 @@ unsigned long rand_dma_triangle(unsigned long arg) {
                 triangle[i][j] = ((float)rand())/(RAND_MAX/2) - 1;
             }
       }
-
-      struct kyouko3_dma_hdr hdr = {
-        .stride = 5,
-        .rgb = 1,
-        .b12 = 1,
-        .count = 3,
-        .opcode = 0x14
-      };
-      printf("DMA hdr: %u\n", hdr);
-      struct dma_req req;
-      // bind_dma(&req);
-      
-
-      buf[c] = *(unsigned int*)&hdr;
-      c++;
       for(int i=0; i<3; i++) {
         for (int j=0; j<6; j++){
           buf[c] = *(unsigned int*)&triangle[i][j];
@@ -199,7 +196,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
       // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   }
   arg = c*4;
-  hdr.cnt = vertices
+  hdr.cnt = vertices;
   ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
