@@ -176,8 +176,9 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma) {
   return ret;
 }
 
-void initiate_transfer(unsigned long size)
+int initiate_transfer(unsigned long size)
 {
+    int ret;
     unsigned long flags;
     spin_lock_irqsave(&dma_snooze.lock, flags);
     //local_irq_save(flags);
@@ -191,7 +192,7 @@ void initiate_transfer(unsigned long size)
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
       spin_unlock_irqrestore(&dma_snooze.lock, flags);
       pr_info("cnt: %ld\n", size);
-      return;
+      return k3.fill;
     }
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     if (k3.fill == k3.drain)
@@ -200,9 +201,10 @@ void initiate_transfer(unsigned long size)
 	//release lock while asleep, but do condition testing w/ lock
         wait_event_interruptible_locked(dma_snooze, k3.fill != k3.drain);
     }
+    ret = k3.fill;
     spin_unlock_irqrestore(&dma_snooze.lock, flags);
     //local_irq_restore(flags);
-    return;
+    return ret;
 }
 
 static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
@@ -210,6 +212,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct dma_req req;
   void __user *argp = (void __user *)arg;
   int i;
+  int ret;
   //int ret;
   printk(KERN_ALERT "ioctl called."); 
 
@@ -305,8 +308,8 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
             return -EFAULT;
           }
-          initiate_transfer(req.count);
-          if (copy_to_user(argp, &dma[k3.fill].u_base, sizeof(unsigned long))) {
+          ret = initiate_transfer(req.count);
+          if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
       break;
