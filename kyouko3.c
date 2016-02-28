@@ -58,6 +58,7 @@ struct kyouko3_vars {
 
 
 inline void K_WRITE_REG(unsigned int reg, unsigned int value) {
+    msleep(10);
 	*(k3.control.k_base+(reg>>2)) = value;
 }
 
