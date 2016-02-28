@@ -77,12 +77,19 @@ void fifo_init(void) {
 
 
 void fifo_flush(void) {
+  int i = 1;
   K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
   printk(KERN_ALERT "FifoHead: %x\n", k3.fifo.head);
   while(k3.fifo.tail_cache != k3.fifo.head) {
     k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
     printk(KERN_ALERT "FifoTail: %x\n", k3.fifo.tail_cache);
     schedule();
+    i++;
+    if (i % 10 == 0)
+     {
+        printk(KERN_ALERT "Fifo Re-kicked in flush");
+        K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+     }
   }
   printk(KERN_ALERT "Flushed!\n");
 }
