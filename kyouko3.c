@@ -195,6 +195,8 @@ int initiate_transfer(unsigned long size)
       printk(KERN_ALERT "k3.fill == k3.drain"); 
       printk(KERN_ALERT "dma[k3.drain] = %xl", dma[k3.drain].handle); 
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
+
+      printk(KERN_ALERT "SIZE2: %d", size); 
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
       pr_info("cnt: %ld\n", size);
