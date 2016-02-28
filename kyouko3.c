@@ -90,6 +90,11 @@ void fifo_write(u32 cmd, u32 val) {
   k3.fifo.k_base[k3.fifo.head].command = cmd;
   k3.fifo.k_base[k3.fifo.head].value = val;
   k3.fifo.head++;
+  if (k3.fifo.head >= FIFO_ENTRIES)
+  {
+      printk(KERN_ALERT "FIFO BUFFER FULL (OF IT)");
+      k3.fifo.head = 0;
+  }
 }
 
 irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
