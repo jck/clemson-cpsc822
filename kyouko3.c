@@ -15,14 +15,6 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Keerthan Jaic");
 
-#define PCI_VENDOR_ID_CCORSI 0x1234
-#define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
-
-#define FIFO_ENTRIES 1024
-
-#define DMA_BUFNUM 8
-#define DMA_BUFSIZE (124*1024)
-
 DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 
 struct phys_region {

@@ -23,6 +23,15 @@ struct kyouko3_dma_hdr {
   __u32 opcode:8;
 };
 
+#define PCI_VENDOR_ID_CCORSI 0x1234
+#define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
+
+#define FIFO_ENTRIES 1024
+
+#define DMA_BUFNUM 8
+#define DMA_BUFSIZE (124*1024)
+
+
 // Page offsets for mmap
 #define VM_PGOFF_CONTROL 0
 #define VM_PGOFF_FB 0x80000000
