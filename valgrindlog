@@ -1,0 +1,43 @@
+==2936== Memcheck, a memory error detector
+==2936== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==2936== Using Valgrind-3.10.0 and LibVEX; rerun with -h for copyright info
+==2936== Command: ./a.out
+==2936== 
+==2936== Syscall param ioctl(generic) points to unaddressable byte(s)
+==2936==    at 0x4F222A7: ioctl (in /usr/lib64/libc-2.17.so)
+==2936==    by 0x40136B: main (user.c:209)
+==2936==  Address 0x1 is not stack'd, malloc'd or (recently) free'd
+==2936== 
+==2936== Invalid write of size 4
+==2936==    at 0x4011D7: rand_dma_triangle (user.c:185)
+==2936==    by 0x40140D: main (user.c:229)
+==2936==  Address 0x7fa9da8ca000 is not stack'd, malloc'd or (recently) free'd
+==2936== 
+==2936== Invalid write of size 4
+==2936==    at 0x40122F: rand_dma_triangle (user.c:188)
+==2936==    by 0x40140D: main (user.c:229)
+==2936==  Address 0x7fa9da8ca004 is not stack'd, malloc'd or (recently) free'd
+==2936== 
+==2936== Warning: noted but unhandled ioctl 0xcc04 with no size/direction hints.
+==2936==    This could cause spurious value errors to appear.
+==2936==    See README_MISSING_SYSCALL_OR_IOCTL for guidance on writing a proper wrapper.
+==2936== Syscall param ioctl(generic) points to unaddressable byte(s)
+==2936==    at 0x4F222A7: ioctl (in /usr/lib64/libc-2.17.so)
+==2936==    by 0x40098D: unbind_dma (user.c:47)
+==2936==    by 0x40142A: main (user.c:233)
+==2936==  Address 0x0 is not stack'd, malloc'd or (recently) free'd
+==2936== 
+==2936== Syscall param ioctl(generic) points to unaddressable byte(s)
+==2936==    at 0x4F222A7: ioctl (in /usr/lib64/libc-2.17.so)
+==2936==    by 0x401461: main (user.c:237)
+==2936==  Address 0x0 is not stack'd, malloc'd or (recently) free'd
+==2936== 
+==2936== 
+==2936== HEAP SUMMARY:
+==2936==     in use at exit: 0 bytes in 0 blocks
+==2936==   total heap usage: 1 allocs, 1 frees, 568 bytes allocated
+==2936== 
+==2936== All heap blocks were freed -- no leaks are possible
+==2936== 
+==2936== For counts of detected and suppressed errors, rerun with: -v
+==2936== ERROR SUMMARY: 193 errors from 5 contexts (suppressed: 1 from 1)
