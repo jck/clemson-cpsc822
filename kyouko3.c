@@ -72,18 +72,18 @@ void fifo_init(void) {
   K_WRITE_REG(FIFO_END, k3.fifo.p_base + 8*FIFO_ENTRIES);
   k3.fifo.head = 0;
   k3.fifo.tail_cache = 0;
-  if (k3.fifo.head >= FIFO_ENTRIES) {
-    k3.fifo.head = 0;
-  }
 }
 
 
 void fifo_flush(void) {
   K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
+  printk(KERN_ALERT "FifoHead: %x\n", k3.fifo.head);
   while(k3.fifo.tail_cache != k3.fifo.head) {
     k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
+    printk(KERN_ALERT "FifoTail: %x\n", k3.fifo.tail_cache);
     schedule();
   }
+  printk(KERN_ALERT "Flushed!\n");
 }
 
 void fifo_write(u32 cmd, u32 val) {
