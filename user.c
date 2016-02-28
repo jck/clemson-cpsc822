@@ -169,7 +169,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
 	.stride = 5,
 	.rgb = 1,
 	.b12 = 1,
-	.count = 3,
+	.count = 9,
 	.opcode = 0x14
   };
   struct dma_req req;
