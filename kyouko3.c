@@ -43,6 +43,7 @@ struct k3_dma_buf {
   unsigned int * k_base;
   unsigned long u_base;
   dma_addr_t handle;
+  int current_size;
 } dma[DMA_BUFNUM];
 
 
@@ -118,7 +119,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   if (!empty)
   {
     printk(KERN_ALERT "DMA Queue not empty in handler"); 
-    size = ((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
+    size = dma[k3.fill].current_size;//((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
     printk(KERN_ALERT "SIZE: %d", size);
     printk(KERN_ALERT "k3.drainp1 = %d", k3.drain);
     fifo_write(BUFA_ADDR, dma[k3.drain].handle);
@@ -184,6 +185,7 @@ int initiate_transfer(unsigned long size)
     int ret;
     unsigned long flags;
     spin_lock_irqsave(&dma_snooze.lock, flags);
+    dma[k3.fill].current_size = size;
     //local_irq_save(flags);
     printk(KERN_ALERT "Initiate transfer"); 
     if (k3.fill == k3.drain)
