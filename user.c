@@ -169,7 +169,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
 	.stride = 5,
 	.rgb = 1,
 	.b12 = 1,
-	.count = 9,
+	.count = (DMA_BUFSIZE / 76),
 	.opcode = 0x14
   };
   struct dma_req req;
@@ -177,7 +177,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   printf("DMA hdr: %u\n", hdr);
   buf[c] = *(unsigned int*)&hdr;
   c++;
-  while (c * 4 < 76 * 3) //DMA_BUFSIZE
+  while (c * 4 < DMA_BUFSIZE) // (76 * 4)
   {
       vertices += 3;
       for (int i = 0; i < 3; i++)
@@ -230,7 +230,7 @@ int main() {
   fprintf(fp, "dma_triangle\n");
   fprintf(fp, "DMA_Triangle complete\n");
   
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < 10; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
