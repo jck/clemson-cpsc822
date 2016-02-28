@@ -16,6 +16,7 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Keerthan Jaic");
 
 DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
+DECLARE_WAIT_QUEUE_HEAD(unbind_snooze);
 
 struct phys_region {
   phys_addr_t p_base;
@@ -43,6 +44,7 @@ struct kyouko3_vars {
   struct phys_region control;
   struct phys_region fb;
   bool graphics_on;
+  bool dma_on;
   struct _fifo fifo;
   struct pci_dev *pdev;
   u32 fill;
@@ -125,6 +127,11 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
     fifo_write(BUFA_CONF, size);
     K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
     printk(KERN_ALERT "k3.drainp2 = %d", k3.drain);
+  }
+  else if (!k3.dma_on)
+  {
+    printk(KERN_ALERT "wake up sleeping user"); 
+    wake_up_interruptible (&unbind_snooze);
   }
   if (full)
   {
@@ -283,6 +290,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       fifo_flush();
       break;
     case BIND_DMA:
+          k3.dma_on = 1;
           pr_info("BIND_DMA\n");
           if (pci_enable_msi(k3.pdev)) {
             pr_warn("pci_enable_msi failed\n");
@@ -305,7 +313,13 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 	  printk(KERN_ALERT "bind_dma"); 
       break;
     case UNBIND_DMA:
+          k3.dma_on = 0;
           pr_info("UNBIND_DMA\n");
+          // snooze user and empty queue
+          if (k3.fill != k3.drain)
+          {
+            wait_event_interruptible_locked(unbind_snooze, k3.fill == k3.drain);
+          }
           for (i=0; i<DMA_BUFNUM; i++) {
             vm_munmap(dma[i].u_base, DMA_BUFSIZE);
             pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base, dma[i].handle);
@@ -373,6 +387,7 @@ int kyouko3_init(void) {
   pr_info("kyouko3_init");
   cdev_init(&kyouko3_dev, &kyouko3_fops);
   cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
+  k3.dma_on = 0;
   return pci_register_driver(&kyouko3_pci_drv);
 }
 
