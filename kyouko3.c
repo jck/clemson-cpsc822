@@ -219,13 +219,13 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
 
         pr_info("Turning ON Graphics\n");
 
-        K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
-
         K_WRITE_REG(FRAME_COLUMNS, 1024);        
         K_WRITE_REG(FRAME_ROWS, 768);        
         K_WRITE_REG(FRAME_ROWPITCH, 1024*4);        
         K_WRITE_REG(FRAME_PIXELFORMAT, 0xf888);
         K_WRITE_REG(FRAME_STARTADDRESS, 0);
+
+        K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
 
         K_WRITE_REG(ENC_WIDTH, 1024);
         K_WRITE_REG(ENC_HEIGHT, 768);
