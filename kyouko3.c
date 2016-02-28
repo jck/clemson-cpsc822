@@ -119,6 +119,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   {
     printk(KERN_ALERT "DMA Queue not empty in handler"); 
     size = ((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
+    printk(KERN_ALERT "SIZE: %d", size);
     printk(KERN_ALERT "k3.drainp1 = %d", k3.drain);
     fifo_write(BUFA_ADDR, dma[k3.drain].handle);
     fifo_write(BUFA_CONF, size);
