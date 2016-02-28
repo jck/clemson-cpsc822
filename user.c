@@ -235,7 +235,7 @@ int main() {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
   }
-  sleep(6);
+//  sleep(6);
   // UNBIND_DMA
   unbind_dma();
   
