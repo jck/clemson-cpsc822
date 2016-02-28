@@ -88,7 +88,9 @@ unsigned long dma_triangle(unsigned long arg) {
   struct kyouko3_dma_hdr hdr = {
     .stride = 5,
     .rgb = 1,
+    .unknown = 0,
     .b12 = 1,
+    .b13 = 0,
     .count = 3,
     .opcode = 0x14
   };
