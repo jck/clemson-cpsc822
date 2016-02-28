@@ -227,12 +227,12 @@ int main() {
   fprintf(fp, "dma_triangle\n");
   fprintf(fp, "DMA_Triangle complete\n");
   
-  for (int i = 0; i < 20; i++)
+  for (int i = 0; i < 10; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
   }
-  sleep(3);
+  sleep(6);
   // UNBIND_DMA
   unbind_dma();
   
