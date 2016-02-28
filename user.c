@@ -182,10 +182,12 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   unsigned  int* buf = (unsigned int *)arg;
 
   unsigned long c = 0;
-  buf[c++] = *(unsigned int*)&hdr;
+  buf[c] = *(unsigned int*)&hdr;
+  c++;
   for(int i=0; i<3; i++) {
     for (int j=0; j<6; j++){
-      buf[c++] = *(unsigned int*)&triangle[i][j];
+      buf[c] = *(unsigned int*)&triangle[i][j];
+      c++;
     }
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
