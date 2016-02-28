@@ -185,15 +185,20 @@ int initiate_transfer(unsigned long size)
     printk(KERN_ALERT "Initiate transfer"); 
     if (k3.fill == k3.drain)
     {
+      // SET LOCKED RETURN VALUE
       k3.fill = (k3.fill + 1) % DMA_BUFNUM;
+      ret = k3.fill;
+
       printk(KERN_ALERT "k3.fill == k3.drain"); 
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-      spin_unlock_irqrestore(&dma_snooze.lock, flags);
       pr_info("cnt: %ld\n", size);
-      return k3.fill;
+
+      spin_unlock_irqrestore(&dma_snooze.lock, flags);
+      return ret;
     }
+    // SET LOCKED RETURN VALUE
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     ret = k3.fill;
     if (k3.fill == k3.drain)
