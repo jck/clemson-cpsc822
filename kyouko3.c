@@ -21,7 +21,7 @@ MODULE_AUTHOR("Keerthan Jaic");
 #define FIFO_ENTRIES 1024
 
 #define DMA_BUFNUM 8
-#define DMA_BUFSIZE 124000u//(124*1024)
+#define DMA_BUFSIZE (124*1024)
 
 DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 
@@ -114,15 +114,15 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
   printk(KERN_ALERT "k3.fill = %d, k3.drain = %d", k3.fill, k3.drain);
   full = k3.fill == k3.drain;
   k3.drain = (k3.drain + 1) % DMA_BUFNUM;
-  empty = k3.fill == k3.drain;
-  if (!empty)
-  {
+  //empty = k3.fill == k3.drain;
+  //if (!empty)
+  //{
     printk(KERN_ALERT "DMA Queue not empty in handler"); 
     size = ((struct kyouko3_dma_hdr*)(dma[k3.drain].k_base))->count;
     fifo_write(BUFA_ADDR, dma[k3.drain].handle);
     fifo_write(BUFA_CONF, size);
     K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-  }
+  //}
   if (full)
   {
     printk(KERN_ALERT "DMA Queue full in handler"); 
@@ -283,7 +283,7 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
             dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, VM_PGOFF_DMA);
           }
           k3.fill = 0;
-          k3.drain = 0; //change line below me too
+          k3.drain = 0;
           if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
