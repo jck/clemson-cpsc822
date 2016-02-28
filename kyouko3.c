@@ -192,7 +192,8 @@ void initiate_transfer(unsigned long size)
     if (k3.fill == k3.drain)
     {
         printk(KERN_ALERT "Putting user to sleep"); 
-        wait_event_interruptible(dma_snooze.lock, k3.fill != k3.drain);
+	//release lock while asleep, but do condition testing w/ lock
+        wait_event_interruptible_locked(dma_snooze, k3.fill != k3.drain);
     }
     spin_unlock_irqrestore(&dma_snooze.lock, flags);
     //local_irq_restore(flags);
