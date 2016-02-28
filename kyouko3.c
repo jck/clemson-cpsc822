@@ -192,6 +192,7 @@ int initiate_transfer(unsigned long size)
       ret = k3.fill;
 
       printk(KERN_ALERT "k3.fill == k3.drain"); 
+      printk(KERN_ALERT "dma[k3.drain] = %xl", dma[k3.drain].handle); 
       fifo_write(BUFA_ADDR, dma[k3.drain].handle);
       fifo_write(BUFA_CONF, size);
       K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
