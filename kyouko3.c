@@ -195,13 +195,13 @@ int initiate_transfer(unsigned long size)
       return k3.fill;
     }
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
+    ret = k3.fill;
     if (k3.fill == k3.drain)
     {
         printk(KERN_ALERT "Putting user to sleep"); 
 	//release lock while asleep, but do condition testing w/ lock
         wait_event_interruptible_locked(dma_snooze, k3.fill != k3.drain);
     }
-    ret = k3.fill;
     spin_unlock_irqrestore(&dma_snooze.lock, flags);
     //local_irq_restore(flags);
     return ret;
