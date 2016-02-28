@@ -199,7 +199,6 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   hdr.count = vertices;
   ioctl(kyouko3.fd, START_DMA, &arg);
   fifo_queue(RASTER_FLUSH, 0);
-  fifo_flush();
   return arg;
 }
 
@@ -230,10 +229,14 @@ int main() {
   fprintf(fp, "dma_triangle\n");
   fprintf(fp, "DMA_Triangle complete\n");
   
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 100; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
+    if (i % 7 == 0)
+    {
+        fifo_flush();
+    }
   }
 //  sleep(6);
   // UNBIND_DMA
