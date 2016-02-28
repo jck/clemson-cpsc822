@@ -106,6 +106,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
     printk(KERN_ALERT "Spurious interrupt"); 
     return IRQ_NONE;
   }
+  spin_lock_irqsave(&dma_snooze.lock, flags);
   printk(KERN_ALERT "k3.fill = %d, k3.drain = %d", k3.fill, k3.drain);
   full = k3.fill == k3.drain;
   k3.drain = (k3.drain + 1) % DMA_BUFNUM;
@@ -123,6 +124,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs){
     printk(KERN_ALERT "DMA Queue full in handler"); 
     wake_up_interruptible (&dma_snooze);
   }
+  spin_unlock_irqrestore(&dma_snooze.lock, flags);
   // if not-spurious, then 
   return IRQ_HANDLED;
 }
