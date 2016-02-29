@@ -233,11 +233,8 @@ int main() {
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
-    if (i % 7 == 0)
-    {
-        fifo_flush();
-    }
   }
+  fifo_flush();
 //  sleep(6);
   // UNBIND_DMA
   unbind_dma();
