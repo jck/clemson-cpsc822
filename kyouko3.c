@@ -242,7 +242,7 @@ initiate_transfer (unsigned long size)
     // SET LOCKED RETURN VALUE
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     ret = k3.fill;
-    k3.full = k3.fill == k3.drain
+    k3.full = k3.fill == k3.drain;
     spin_unlock_irqrestore (&dma_snooze.lock, flags);
     if (k3.full)
     {
