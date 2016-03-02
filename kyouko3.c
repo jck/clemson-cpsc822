@@ -415,7 +415,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		    {
 			return ret;
 		    }
-		    ret = initiate_transfer (req.count);
+		    ret = initiate_transfer (count);
 		    if (ret =
 			copy_to_user (argp, &dma[ret].u_base,
 				      sizeof (unsigned long)))
