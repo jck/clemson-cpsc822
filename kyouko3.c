@@ -226,7 +226,7 @@ int initiate_transfer(unsigned long size)
     return ret;
 }
 
-static unsigned long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
+static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
   void __user *argp = (void __user *)arg;
   int i;
@@ -307,6 +307,7 @@ static unsigned long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned l
           }
           k3.fill = 0;
           k3.drain = 0;
+  	  printk (KERN_ALERT "DMA_U_BASE %lx", (unsigned long) dma[0].u_base);
           ret = dma[0].u_base;
           //if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
           //  pr_info("ctu fail\n");
