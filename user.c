@@ -231,7 +231,7 @@ int main() {
   
   for (int i = 0; i < 8; i++)
   {
-    fprintf(stderr, "i, arg: %d, %xl\n", i, arg);
+    fprintf(stderr, "i, arg: %d, %lx\n", i, arg);
     arg = rand_dma_triangle(arg);
   }
   fifo_flush();
