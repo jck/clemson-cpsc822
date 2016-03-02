@@ -536,12 +536,14 @@ struct pci_driver kyouko3_pci_drv = {
 int
 kyouko3_init (void)
 {
+    int ret;
     cdev_init (&kyouko3_dev, &kyouko3_fops);
     cdev_add (&kyouko3_dev, MKDEV (500, 127), 1);
     k3.dma_on = 0;
+    ret = pci_register_drive(&kyouko3_pci_drv);
     pci_enable_device (pdev);
     pci_set_master (pdev);
-    return pci_register_driver (&kyouko3_pci_drv);
+    return ret
 }
 
 /*
