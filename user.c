@@ -136,7 +136,6 @@ rand_dma_triangle (unsigned long arg)
 	.opcode = 0x14
     };
 
-    printf ("DMA hdr: %u\n", hdr);
     buf[c] = *(unsigned int *) &hdr;
     c++;
     
