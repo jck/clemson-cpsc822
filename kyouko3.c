@@ -242,13 +242,14 @@ initiate_transfer (unsigned long size)
     // SET LOCKED RETURN VALUE
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     ret = k3.fill;
-    if ((k3.full = k3.fill == k3.drain))
+    k3.full = k3.fill == k3.drain
+    spin_unlock_irqrestore (&dma_snooze.lock, flags);
+    if (k3.full)
     {
 	    //release lock while asleep, but do condition testing w/ lock
         //thanks to interruptible_locked.
 	    wait_event_interruptible(dma_snooze, !k3.full);
     }
-    spin_unlock_irqrestore (&dma_snooze.lock, flags);
     return ret;
 }
 
