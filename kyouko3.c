@@ -13,8 +13,8 @@
 #include "kyouko3.h"
 
 MODULE_LICENSE ("Proprietary");
-MODULE_AUTHOR ("Sriram Madhivanan, Tyler Allen, Keerthan Jaic, 
-                Praarthana Ramakrishnan");
+MODULE_AUTHOR ("Sriram Madhivanan, Tyler Allen, Keerthan Jaic," 
+               " Praarthana Ramakrishnan");
 
 DECLARE_WAIT_QUEUE_HEAD (dma_snooze);
 DECLARE_WAIT_QUEUE_HEAD (unbind_snooze);
