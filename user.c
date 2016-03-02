@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "kyouko3.h"
 
