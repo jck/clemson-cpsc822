@@ -15,7 +15,6 @@ struct dma_req
     __u32 count;
 };
 
-
 struct u_kyouko_device
 {
     unsigned int *u_control_base;
@@ -23,9 +22,9 @@ struct u_kyouko_device
     int fd;
 } kyouko3;
 
-#define KYOUKO_CONTROL_SIZE (65536)
-#define Device_RAM (0x0020)
-
+/*
+ * This is a series of wrapper functions.
+ */
 unsigned int
 U_READ_REG (unsigned int reg)
 {
@@ -69,6 +68,9 @@ unbind_dma (void)
     ioctl (kyouko3.fd, UNBIND_DMA, 0);
 }
 
+/*
+ * Draws red line,
+ */
 void
 draw_line_fb ()
 {
@@ -77,6 +79,9 @@ draw_line_fb ()
 	U_WRITE_FB (i, 0xff0000);
 }
 
+/*
+ * DRaws a triangle using fifo.
+ */
 void
 fifo_triangle ()
 {
@@ -106,94 +111,9 @@ fifo_triangle ()
     fifo_flush ();
 }
 
-unsigned long
-dma_triangle (unsigned long arg)
-{
-    printf ("Drawing triangle using DMA\n");
-    float triangle[3][6] = {
-	{1.0, 0, 0, 0.5, 0.5, 0},
-	{0, 1.0, 0, 0.5, 0, 0},
-	{0, 0, 1.0, 0.125, 0.5, 0},
-    };
-    struct kyouko3_dma_hdr hdr = {
-	.stride = 5,
-	.rgb = 1,
-	.unknown = 0,
-	.b12 = 1,
-	.b13 = 0,
-	.count = 3,
-	.opcode = 0x14
-    };
-    printf ("DMA hdr: %u\n", hdr);
-    struct dma_req req;
-
-    // bind_dma(&req);
-    printf ("DMA u_base: %lx\n", arg);
-
-    fprintf (stderr, "dma triangle: %lx\n", arg);
-    unsigned int *buf = (unsigned int *) arg;
-
-    unsigned long c = 0;
-
-    buf[c++] = *(unsigned int *) &hdr;
-    for (int i = 0; i < 3; i++)
-    {
-	for (int j = 0; j < 6; j++)
-	{
-	    buf[c++] = *(unsigned int *) &triangle[i][j];
-	}
-    }
-    // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
-    arg = c * 4;
-    ioctl (kyouko3.fd, START_DMA, &arg);
-    fifo_queue (RASTER_FLUSH, 0);
-    fifo_flush ();
-    return arg;
-}
-
-unsigned long
-dma_triangle2 (unsigned long arg)
-{
-    printf ("Drawing triangle using DMA\n");
-    float triangle[3][6] = {
-	{1.0, 0, 0, -0.5, -0.5, 0},
-	{0, 1.0, 0, 0.5, 0, 0},
-	{0, 0, 1.0, 0.125, 0.5, 0},
-    };
-    struct kyouko3_dma_hdr hdr = {
-	.stride = 5,
-	.rgb = 1,
-	.b12 = 1,
-	.count = 3,
-	.opcode = 0x14
-    };
-    printf ("DMA hdr: %u\n", hdr);
-    struct dma_req req;
-
-    // bind_dma(&req);
-    printf ("DMA u_base: %lx\n", arg);
-
-    fprintf (stderr, "dma triangle2: %lx\n", arg);
-    unsigned int *buf = (unsigned int *) arg;
-
-    unsigned long c = 0;
-
-    buf[c++] = *(unsigned int *) &hdr;
-    for (int i = 0; i < 3; i++)
-    {
-	for (int j = 0; j < 6; j++)
-	{
-	    buf[c++] = *(unsigned int *) &triangle[i][j];
-	}
-    }
-    // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
-    arg = c * 4;
-    ioctl (kyouko3.fd, START_DMA, &arg);
-    fifo_queue (RASTER_FLUSH, 0);
-    fifo_flush ();
-    return arg;
-}
-
+/*
+ * Draws random triangles that fill a  buffer.
+ */
 unsigned long
 rand_dma_triangle (unsigned long arg)
 {
@@ -217,29 +137,28 @@ rand_dma_triangle (unsigned long arg)
     };
     struct dma_req req;
 
-    // bind_dma(&req);
     printf ("DMA hdr: %u\n", hdr);
     buf[c] = *(unsigned int *) &hdr;
     c++;
-    while (c * 4 < DMA_BUFSIZE)	// (76 * 4)
+    
+    while (c * 4 < DMA_BUFSIZE)
     {
-	vertices += 3;
-	for (int i = 0; i < 3; i++)
-	{
-	    for (int j = 3; j < 5; j++)
-	    {
-		triangle[i][j] = ((float) rand ()) / (RAND_MAX / 2) - 1;
-	    }
-	}
-	for (int i = 0; i < 3; i++)
-	{
-	    for (int j = 0; j < 6; j++)
-	    {
-		buf[c] = *(unsigned int *) &triangle[i][j];
-		c++;
-	    }
-	}
-	// unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
+        vertices += 3;
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 3; j < 5; j++)
+            {
+            triangle[i][j] = ((float) rand ()) / (RAND_MAX / 2) - 1;
+            }
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 6; j++)
+            {
+                buf[c] = *(unsigned int *) &triangle[i][j];
+                c++;
+            }
+        }
     }
     arg = c * 4;
     hdr.count = vertices;
@@ -257,43 +176,43 @@ main ()
     kyouko3.fd = open ("/dev/kyouko3", O_RDWR);
     fprintf (fp, "char device open\n");
     kyouko3.u_control_base =
-	mmap (0, KYOUKO_CONTROL_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
+	    mmap (0, KYOUKO_CONTROL_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
 	      kyouko3.fd, VM_PGOFF_CONTROL);
     kyouko3.u_fb_base =
-	mmap (0, U_READ_REG (Device_RAM) * 1024 * 1024, PROT_READ | PROT_WRITE,
+	    mmap (0, U_READ_REG (Device_RAM) * 1024 * 1024, PROT_READ | PROT_WRITE,
 	      MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
-    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
-    fprintf (fp, "graphics on\n");
-//  draw_line_fb();
-//  sleep(2);
-//  fifo_triangle();
-//  sleep(2);
 
-    //BIND_DMA
+    // draw line
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    draw_line_fb();
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    // draw fifo triangle
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    fifo_triangle();
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    sleep(2);
+    
+    // show off DMA
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     unsigned long arg = 0;
 
+    //BIND_DMA
     ioctl (kyouko3.fd, BIND_DMA, &arg);
-    //arg = dma_triangle(arg);
-    //sleep(2);
-    //arg = dma_triangle2(arg);
-    //sleep(2);
-    fprintf (fp, "dma_triangle\n");
-    fprintf (fp, "DMA_Triangle complete\n");
 
     for (int i = 0; i < 100; i++)
     {
-	fprintf (fp, "rand_triangle %d\n", i);
-	arg = rand_dma_triangle (arg);
+    	arg = rand_dma_triangle (arg);
     }
     fifo_flush ();
-//  sleep(6);
+    sleep(6);
     // UNBIND_DMA
     unbind_dma ();
-
-
-    fprintf (fp, "triangle done\n");
     ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
-    fprintf (fp, "VMODE_OFF\n");
+
+    // cleanup
     fclose (fp);
     close (kyouko3.fd);
     return 0;

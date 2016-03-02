@@ -20,6 +20,10 @@ struct kyouko3_dma_hdr
     __u32 opcode:8;
 };
 
+
+#define KYOUKO_CONTROL_SIZE (65536)
+#define Device_RAM (0x0020)
+
 #define PCI_VENDOR_ID_CCORSI 0x1234
 #define PCI_DEVICE_ID_CCORSI_KYOUKO3 0x1113
 
