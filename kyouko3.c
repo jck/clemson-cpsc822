@@ -422,6 +422,8 @@ kyouko3_open (struct inode *inode, struct file *fp)
 int
 kyouko3_release (struct inode *inode, struct file *fp)
 {
+    kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
+    fifo_flush();
     iounmap (k3.control.k_base);
     iounmap (k3.fb.k_base);
     pci_free_consistent (k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
@@ -498,8 +500,7 @@ kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
     k3.fb.p_base = pci_resource_start (pdev, 2);
     k3.fb.len = pci_resource_len (pdev, 2);
 
-    pci_set_master (pdev);
-    return pci_enable_device (pdev);
+    return 0
 }
 
 /*
@@ -538,6 +539,8 @@ kyouko3_init (void)
     cdev_init (&kyouko3_dev, &kyouko3_fops);
     cdev_add (&kyouko3_dev, MKDEV (500, 127), 1);
     k3.dma_on = 0;
+    pci_enable_device (pdev);
+    pci_set_master (pdev);
     return pci_register_driver (&kyouko3_pci_drv);
 }
 
