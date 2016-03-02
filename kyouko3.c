@@ -310,7 +310,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
         // Add item to fifo queue.
 	    case FIFO_QUEUE:
 		{
-		    if (ret = copy_from_user (&entry, argp, sizeof (struct fifo_entry)))
+		    if ((ret = copy_from_user (&entry, argp, sizeof (struct fifo_entry))))
 		    {
 			    return -EFAULT;
 		    }
