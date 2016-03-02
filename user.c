@@ -135,7 +135,6 @@ rand_dma_triangle (unsigned long arg)
 	.count = (DMA_BUFSIZE / 76),
 	.opcode = 0x14
     };
-    struct dma_req req;
 
     printf ("DMA hdr: %u\n", hdr);
     buf[c] = *(unsigned int *) &hdr;
@@ -186,13 +185,13 @@ main ()
     ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     draw_line_fb();
     sleep(2);
-    //ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
     // draw fifo triangle
     sleep(2);
-    //ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     fifo_triangle();
     sleep(2);
-    //ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
     sleep(2);
     
     // show off DMA

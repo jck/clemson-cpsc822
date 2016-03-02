@@ -299,7 +299,10 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
             // disable graphics mode.
             else if (arg == GRAPHICS_OFF)
             {
-                K_WRITE_REG (CONFIG_REBOOT, 0);
+                fifo_flush();
+                K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
+                K_WRITE_REG (CONF_MODESET, 0);
+                //K_WRITE_REG (CONFIG_REBOOT, 0);
                 k3.graphics_on = 0;
             }
             break;
