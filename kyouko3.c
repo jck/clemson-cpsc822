@@ -271,12 +271,10 @@ long
 kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 {
     struct fifo_entry entry;
-    struct dma_req req;
     void __user *argp = (void __user *) arg;
     int i;
     long ret;
 
-    //int ret;
     printk (KERN_ALERT "ioctl called.");
 
     switch (cmd)
