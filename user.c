@@ -9,6 +9,11 @@
 
 #include "kyouko3.h"
 
+struct dma_req {
+	unsigned int *u_base;
+	__u32 count;
+};
+
 struct u_kyouko_device {
   unsigned int *u_control_base;
   unsigned int *u_fb_base;
