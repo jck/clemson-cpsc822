@@ -308,9 +308,10 @@ static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           }
           k3.fill = 0;
           k3.drain = 0;
-          if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
-            pr_info("ctu fail\n");
-          }
+          ret = &dma[0].u_base;
+          //if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
+          //  pr_info("ctu fail\n");
+          //}
 	  printk(KERN_ALERT "bind_dma"); 
       break;
     case UNBIND_DMA:
