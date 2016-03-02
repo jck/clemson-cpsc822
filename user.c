@@ -89,9 +89,10 @@ unbind_dma (void)
 void
 draw_line_fb ()
 {
-    printf ("Drawing line by writing to FB\n");
     for (int i = 200 * 1024; i < 201 * 1024; i++)
-	U_WRITE_FB (i, 0xff0000);
+    {
+	    U_WRITE_FB (i, 0xff0000);
+    }
 }
 
 /*
@@ -100,7 +101,6 @@ draw_line_fb ()
 void
 fifo_triangle ()
 {
-    printf ("Drawing triangle by queing FIFO cmds\n");
     float triangle[3][2][4] = {
 	{{-0.5, -0.5, 0, 1.0}, {1.0, 0, 0, 0}},
 	{{0.5, 0, 0, 1.0}, {0, 1.0, 0, 0}},
@@ -197,18 +197,25 @@ main ()
 	      MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
 
     // draw line
+    printf ("Drawing line by writing to FB\n");
+    sleep(2);
     ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     draw_line_fb();
     sleep(2);
     ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
     // draw fifo triangle
     sleep(2);
+
+    printf ("Drawing triangle by queing FIFO cmds\n");
+    sleep(2);
     ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     fifo_triangle();
     sleep(2);
     ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+
+
+    printf ("Drawing random triangles with dma.\n");
     sleep(2);
-    
     // show off DMA
     ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     unsigned long arg = 0;
