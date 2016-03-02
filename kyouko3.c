@@ -256,7 +256,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
     struct fifo_entry entry;
     void __user *argp = (void __user *) arg;
     int i;
-    long ret;
+    long ret = 0;
     int count;
 
     switch (cmd)
@@ -325,13 +325,13 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		{
 		    k3.dma_on = 1;
             // bail if we can't init
-		    if (ret = pci_enable_msi (k3.pdev))
+		    if ((ret = pci_enable_msi (k3.pdev)))
 		    {
 			    return ret;
 		    }
-		    if (ret =
+		    if ((ret =
 			        request_irq (k3.pdev->irq, (irq_handler_t) dma_isr,
-				    IRQF_SHARED, "kyouku3 dma isr", &k3))
+				    IRQF_SHARED, "kyouku3 dma isr", &k3)))
 		    {
 			    return ret;
 		    }
@@ -350,8 +350,8 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		    k3.fill = 0;
 		    k3.drain = 0;
             // copy back first address or bail if we fail.
-		    if (ret = copy_to_user (argp, &dma[0].u_base, 
-                                    sizeof (unsigned long)))
+		    if ((ret = copy_to_user (argp, &dma[0].u_base, 
+                                    sizeof (unsigned long))))
 		    {
 			    return ret;
 		    }
@@ -384,14 +384,14 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 	    case START_DMA:
 		{
             // using copies to preserve return as an error value.
-		    if (ret = copy_from_user (&count, argp, sizeof (unsigned int)))
+		    if ((ret = copy_from_user (&count, argp, sizeof (unsigned int))))
 		    {
 			    return ret;
 		    }
             // initiate transfer is the bulk of this function
 		    ret = initiate_transfer (count);
-		    if (ret = copy_to_user (argp, &dma[ret].u_base, 
-                                    sizeof (unsigned long)))
+		    if ((ret = copy_to_user (argp, &dma[ret].u_base, 
+                                    sizeof (unsigned long))))
 		    {
 			    return ret;
 		    }
