@@ -307,7 +307,7 @@ static unsigned long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned l
           }
           k3.fill = 0;
           k3.drain = 0;
-          ret = &dma[0].u_base;
+          ret = dma[0].u_base;
           //if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
           //  pr_info("ctu fail\n");
           //}
@@ -335,7 +335,7 @@ static unsigned long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned l
           //if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
           //  return -EFAULT;
           //}
-          ret = initiate_transfer(arg);
+          ret = dma[initiate_transfer(arg)].u_base;
           //if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
           //  pr_info("ctu fail\n");
           //}
