@@ -98,8 +98,7 @@ struct kyouko3_vars
  * reg - register to write to.
  * value - value to write to register.
  */
-inline void
-K_WRITE_REG (unsigned int reg, unsigned int value)
+inline void K_WRITE_REG (unsigned int reg, unsigned int value)
 {
     *(k3.control.k_base + (reg >> 2)) = value;
 }
@@ -109,8 +108,7 @@ K_WRITE_REG (unsigned int reg, unsigned int value)
  * Params:
  * reg - register to read.
  */
-inline unsigned int
-K_READ_REG (unsigned int reg)
+inline unsigned int K_READ_REG (unsigned int reg)
 {
     rmb ();
     return *(k3.control.k_base + (reg >> 2));
@@ -120,8 +118,7 @@ K_READ_REG (unsigned int reg)
  * Init function for the fifo. Sets up fifo head and tail values, and 
  * allocates memory for the fifo.
  */
-void
-fifo_init (void)
+void fifo_init (void)
 {
     k3.fifo.k_base =
 	pci_alloc_consistent (k3.pdev, 8 * FIFO_ENTRIES, &k3.fifo.p_base);
@@ -136,8 +133,7 @@ fifo_init (void)
  * Flush function for synchronizing the software-copy of the FIFO with the 
  * on-card fifo.
  */
-void
-fifo_flush (void)
+void fifo_flush (void)
 {
     K_WRITE_REG (FIFO_HEAD, k3.fifo.head);
     while (k3.fifo.tail_cache != k3.fifo.head)
@@ -153,8 +149,7 @@ fifo_flush (void)
  * cmd - FIFO command to execute.
  * val - Value used for the command.
  */
-void
-fifo_write (u32 cmd, u32 val)
+void fifo_write (u32 cmd, u32 val)
 {
     k3.fifo.k_base[k3.fifo.head].command = cmd;
     k3.fifo.k_base[k3.fifo.head].value = val;
@@ -168,8 +163,7 @@ fifo_write (u32 cmd, u32 val)
 /*
  * DMA interrupt handler.
  */
-irqreturn_t
-dma_isr (int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 {
     int empty;
     int size;
@@ -215,8 +209,7 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 /*
  * Initiate a DMA request if possible.
  */
-int
-initiate_transfer (unsigned long size)
+int initiate_transfer (unsigned long size)
 {
     int ret;
     unsigned long flags;
@@ -253,8 +246,7 @@ initiate_transfer (unsigned long size)
  * IOCTL function containing logic for turning on/off graphics mode, on/off
  * dma, writing to the fifo, and flushing the fifo queue.
  */
-long
-kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
+long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 {
     struct fifo_entry entry;
     void __user *argp = (void __user *) arg;
@@ -416,8 +408,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 /*
  * Open function for kernel module.
  */
-int
-kyouko3_open (struct inode *inode, struct file *fp)
+int kyouko3_open (struct inode *inode, struct file *fp)
 {
     // ioremap_wc is faster than ioremap on some hardware
     k3.control.k_base = ioremap_wc (k3.control.p_base, k3.control.len);
@@ -429,8 +420,7 @@ kyouko3_open (struct inode *inode, struct file *fp)
 /*
  * Release function for kernel module.
  */
-int
-kyouko3_release (struct inode *inode, struct file *fp)
+int kyouko3_release (struct inode *inode, struct file *fp)
 {
     kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
     fifo_flush();
@@ -444,8 +434,7 @@ kyouko3_release (struct inode *inode, struct file *fp)
  * Memory mapping function. Maps to control region, framebuffer, or DMA
  * buffers.
  */
-int
-kyouko3_mmap (struct file *fp, struct vm_area_struct *vma)
+int kyouko3_mmap (struct file *fp, struct vm_area_struct *vma)
 {
     int ret = 0;
     unsigned long off;
@@ -499,8 +488,7 @@ struct cdev kyouko3_dev;
 /*
  * Probe function.
  */
-int
-kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
+int kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
 {
     k3.pdev = pdev;
 
@@ -516,8 +504,7 @@ kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
 /*
  * Remove function.
  */
-void
-kyouko3_remove (struct pci_dev *pdev)
+void kyouko3_remove (struct pci_dev *pdev)
 {
     pci_disable_device (pdev);
 }
@@ -543,8 +530,7 @@ struct pci_driver kyouko3_pci_drv = {
 /*
  * Basic init function.
  */
-int
-kyouko3_init (void)
+int kyouko3_init (void)
 {
     int ret;
     cdev_init (&kyouko3_dev, &kyouko3_fops);
@@ -559,8 +545,7 @@ kyouko3_init (void)
 /*
  * Basic exit function.
  */
-void
-kyouko3_exit (void)
+void kyouko3_exit (void)
 {
     cdev_del (&kyouko3_dev);
     pci_unregister_driver (&kyouko3_pci_drv);
