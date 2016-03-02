@@ -199,7 +199,6 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
     // Buffer is empty and dma is off, we are shutting down so wake user.
     else
     {
-        full = 0;
         if (!k3.dma_on)
         {
 	        wake_up_interruptible (&unbind_snooze);
@@ -208,6 +207,7 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
     // Wake up sleeping user if buffer was full.
     if (full)
     {
+        full = 0;
 	    wake_up_interruptible (&dma_snooze);
     }
     // if not-spurious, then 
