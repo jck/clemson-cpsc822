@@ -21,15 +21,15 @@
 
 #include "kyouko3.h"
 
-MODULE_LICENSE ("Proprietary");
-MODULE_AUTHOR ("Sriram Madhivanan, Tyler Allen, Keerthan Jaic," 
+MODULE_LICENSE("Proprietary");
+MODULE_AUTHOR("Sriram Madhivanan, Tyler Allen, Keerthan Jaic," 
                " Praarthana Ramakrishnan");
 
 // This queue head is used for snoozing while DMA buffers are full. 
-DECLARE_WAIT_QUEUE_HEAD (dma_snooze);
+DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 // This queue head is used for snoozing while waiting for DMA buffers to 
 // completely empty before exiting.
-DECLARE_WAIT_QUEUE_HEAD (unbind_snooze);
+DECLARE_WAIT_QUEUE_HEAD(unbind_snooze);
 
 // Struct containing info on a physical region of memory.
 struct phys_region
@@ -98,7 +98,7 @@ struct kyouko3_vars
  * reg - register to write to.
  * value - value to write to register.
  */
-inline void K_WRITE_REG (unsigned int reg, unsigned int value)
+inline void K_WRITE_REG(unsigned int reg, unsigned int value)
 {
     *(k3.control.k_base + (reg >> 2)) = value;
 }
@@ -108,9 +108,9 @@ inline void K_WRITE_REG (unsigned int reg, unsigned int value)
  * Params:
  * reg - register to read.
  */
-inline unsigned int K_READ_REG (unsigned int reg)
+inline unsigned int K_READ_REG(unsigned int reg)
 {
-    rmb ();
+    rmb();
     return *(k3.control.k_base + (reg >> 2));
 }
 
@@ -118,12 +118,12 @@ inline unsigned int K_READ_REG (unsigned int reg)
  * Init function for the fifo. Sets up fifo head and tail values, and 
  * allocates memory for the fifo.
  */
-void fifo_init (void)
+void fifo_init(void)
 {
     k3.fifo.k_base =
-	pci_alloc_consistent (k3.pdev, 8 * FIFO_ENTRIES, &k3.fifo.p_base);
-    K_WRITE_REG (FIFO_START, k3.fifo.p_base);
-    K_WRITE_REG (FIFO_END, k3.fifo.p_base + 8 * FIFO_ENTRIES);
+	pci_alloc_consistent(k3.pdev, 8 * FIFO_ENTRIES, &k3.fifo.p_base);
+    K_WRITE_REG(FIFO_START, k3.fifo.p_base);
+    K_WRITE_REG(FIFO_END, k3.fifo.p_base + 8 * FIFO_ENTRIES);
     k3.fifo.head = 0;
     k3.fifo.tail_cache = 0;
 }
@@ -133,13 +133,13 @@ void fifo_init (void)
  * Flush function for synchronizing the software-copy of the FIFO with the 
  * on-card fifo.
  */
-void fifo_flush (void)
+void fifo_flush(void)
 {
-    K_WRITE_REG (FIFO_HEAD, k3.fifo.head);
+    K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
     while (k3.fifo.tail_cache != k3.fifo.head)
     {
-        k3.fifo.tail_cache = K_READ_REG (FIFO_TAIL);
-        schedule ();
+        k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
+        schedule();
     }
 }
 
@@ -149,7 +149,7 @@ void fifo_flush (void)
  * cmd - FIFO command to execute.
  * val - Value used for the command.
  */
-void fifo_write (u32 cmd, u32 val)
+void fifo_write(u32 cmd, u32 val)
 {
     k3.fifo.k_base[k3.fifo.head].command = cmd;
     k3.fifo.k_base[k3.fifo.head].value = val;
@@ -167,9 +167,9 @@ irqreturn_t dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 {
     int empty;
     int size;
-    u32 iflags = K_READ_REG (INFO_STATUS);
+    u32 iflags = K_READ_REG(INFO_STATUS);
 
-    K_WRITE_REG (INFO_STATUS, 0xf);
+    K_WRITE_REG(INFO_STATUS, 0xf);
 
     // spurious interrupt
     if ((iflags & 0x02) == 0)
@@ -184,23 +184,23 @@ irqreturn_t dma_isr (int irq, void *dev_id, struct pt_regs *regs)
     if (!empty)
     {
         size = dma[k3.fill].current_size;
-        fifo_write (BUFA_ADDR, dma[k3.drain].handle);
-        fifo_write (BUFA_CONF, size);
-        K_WRITE_REG (FIFO_HEAD, k3.fifo.head);
+        fifo_write(BUFA_ADDR, dma[k3.drain].handle);
+        fifo_write(BUFA_CONF, size);
+        K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
     }
     // Buffer is empty and dma is off, we are shutting down so wake user.
     else
     {
         if (!k3.dma_on)
         {
-	        wake_up_interruptible (&unbind_snooze);
+	        wake_up_interruptible(&unbind_snooze);
         }
     }
     // Wake up sleeping user if buffer was full.
     if (k3.full)
     {
         k3.full = 0;
-	    wake_up_interruptible (&dma_snooze);
+	    wake_up_interruptible(&dma_snooze);
     }
     // if not-spurious, then 
     return IRQ_HANDLED;
@@ -209,12 +209,12 @@ irqreturn_t dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 /*
  * Initiate a DMA request if possible.
  */
-int initiate_transfer (unsigned long size)
+int initiate_transfer(unsigned long size)
 {
     int ret;
     unsigned long flags;
     // grab dma_snooze lock so that we can use wait_event_interruptible_locked.
-    spin_lock_irqsave (&dma_snooze.lock, flags);
+    spin_lock_irqsave(&dma_snooze.lock, flags);
     dma[k3.fill].current_size = size;
     if (k3.fill == k3.drain)
     {
@@ -223,18 +223,18 @@ int initiate_transfer (unsigned long size)
         ret = k3.fill;
 
         // push next item to card.
-        fifo_write (BUFA_ADDR, dma[k3.drain].handle);
-        fifo_write (BUFA_CONF, size);
-        K_WRITE_REG (FIFO_HEAD, k3.fifo.head);
+        fifo_write(BUFA_ADDR, dma[k3.drain].handle);
+        fifo_write(BUFA_CONF, size);
+        K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
-        spin_unlock_irqrestore (&dma_snooze.lock, flags);
+        spin_unlock_irqrestore(&dma_snooze.lock, flags);
         return ret;
     }
     // SET LOCKED RETURN VALUE
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     ret = k3.fill;
     k3.full = k3.fill == k3.drain;
-    spin_unlock_irqrestore (&dma_snooze.lock, flags);
+    spin_unlock_irqrestore(&dma_snooze.lock, flags);
     if (k3.full)
     {
 	    wait_event_interruptible(dma_snooze, !k3.full);
@@ -246,7 +246,7 @@ int initiate_transfer (unsigned long size)
  * IOCTL function containing logic for turning on/off graphics mode, on/off
  * dma, writing to the fifo, and flushing the fifo queue.
  */
-long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
+long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
     struct fifo_entry entry;
     void __user *argp = (void __user *) arg;
@@ -262,32 +262,32 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		    if (arg == GRAPHICS_ON)
 		    {
 
-                K_WRITE_REG (FRAME_COLUMNS, 1024);
-                K_WRITE_REG (FRAME_ROWS, 768);
-                K_WRITE_REG (FRAME_ROWPITCH, 1024 * 4);
-                K_WRITE_REG (FRAME_PIXELFORMAT, 0xf888);
-                K_WRITE_REG (FRAME_STARTADDRESS, 0);
+                K_WRITE_REG(FRAME_COLUMNS, 1024);
+                K_WRITE_REG(FRAME_ROWS, 768);
+                K_WRITE_REG(FRAME_ROWPITCH, 1024 * 4);
+                K_WRITE_REG(FRAME_PIXELFORMAT, 0xf888);
+                K_WRITE_REG(FRAME_STARTADDRESS, 0);
 
-                K_WRITE_REG (CONF_ACCELERATION, 0x40000000);
+                K_WRITE_REG(CONF_ACCELERATION, 0x40000000);
 
-                K_WRITE_REG (ENC_WIDTH, 1024);
-                K_WRITE_REG (ENC_HEIGHT, 768);
-                K_WRITE_REG (ENC_OFFSETX, 0);
-                K_WRITE_REG (ENC_OFFSETY, 0);
-                K_WRITE_REG (ENC_FRAME, 0);
+                K_WRITE_REG(ENC_WIDTH, 1024);
+                K_WRITE_REG(ENC_HEIGHT, 768);
+                K_WRITE_REG(ENC_OFFSETX, 0);
+                K_WRITE_REG(ENC_OFFSETY, 0);
+                K_WRITE_REG(ENC_FRAME, 0);
 
-                K_WRITE_REG (CONF_MODESET, 0);
+                K_WRITE_REG(CONF_MODESET, 0);
 
-                msleep (10);
+                msleep(10);
 
-                fifo_write (CLEAR_COLOR, 0);
-                fifo_write (CLEAR_COLOR + 0x0004, 0);
-                fifo_write (CLEAR_COLOR + 0x0008, 0);
-                fifo_write (CLEAR_COLOR + 0x000c, 0);
+                fifo_write(CLEAR_COLOR, 0);
+                fifo_write(CLEAR_COLOR + 0x0004, 0);
+                fifo_write(CLEAR_COLOR + 0x0008, 0);
+                fifo_write(CLEAR_COLOR + 0x000c, 0);
 
-                fifo_write (RASTER_CLEAR, 3);
-                fifo_write (RASTER_FLUSH, 0);
-                fifo_flush ();
+                fifo_write(RASTER_CLEAR, 3);
+                fifo_write(RASTER_FLUSH, 0);
+                fifo_flush();
 
                 k3.graphics_on = 1;
             }
@@ -303,7 +303,7 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
                     fifo_flush();
 		}
                 K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
-                K_WRITE_REG (CONF_MODESET, 0);
+                K_WRITE_REG(CONF_MODESET, 0);
                 k3.graphics_on = 0;
             }
             break;
@@ -311,17 +311,17 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
         // Add item to fifo queue.
 	    case FIFO_QUEUE:
 		{
-		    if ((ret = copy_from_user (&entry, argp, sizeof (struct fifo_entry))))
+		    if ((ret = copy_from_user(&entry, argp, sizeof(struct fifo_entry))))
 		    {
 			    return -EFAULT;
 		    }
-		    fifo_write (entry.command, entry.value);
+		    fifo_write(entry.command, entry.value);
 		    break;
 		}
         // Sync software fifo with hardware fifo.
 	    case FIFO_FLUSH:
 		{
-		    fifo_flush ();
+		    fifo_flush();
 		    break;
 		}
         // Bind DMA buffers to begin dma actions.
@@ -329,24 +329,24 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		{
 		    k3.dma_on = 1;
             // bail if we can't init
-		    if ((ret = pci_enable_msi (k3.pdev)))
+		    if ((ret = pci_enable_msi(k3.pdev)))
 		    {
 			    return ret;
 		    }
 		    if ((ret =
-			        request_irq (k3.pdev->irq, (irq_handler_t) dma_isr,
+			        request_irq(k3.pdev->irq, (irq_handler_t) dma_isr,
 				    IRQF_SHARED, "kyouku3 dma isr", &k3)))
 		    {
 			    return ret;
 		    }
-		    K_WRITE_REG (CONF_INTERRUPT, 0x02);
+		    K_WRITE_REG(CONF_INTERRUPT, 0x02);
             // acquire dma buffers
 		    for (i = 0; i < DMA_BUFNUM; i++)
 		    {
                 k3.fill = i;
-                dma[i].k_base = pci_alloc_consistent (k3.pdev, DMA_BUFSIZE,
+                dma[i].k_base = pci_alloc_consistent(k3.pdev, DMA_BUFSIZE,
                                                       &dma[i].handle);
-                dma[i].u_base = vm_mmap (fp, 0, DMA_BUFSIZE, 
+                dma[i].u_base = vm_mmap(fp, 0, DMA_BUFSIZE, 
                                          PROT_READ | PROT_WRITE,
                                          MAP_SHARED, VM_PGOFF_DMA);
 		    }
@@ -354,8 +354,8 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		    k3.fill = 0;
 		    k3.drain = 0;
             // copy back first address or bail if we fail.
-		    if ((ret = copy_to_user (argp, &dma[0].u_base, 
-                                    sizeof (unsigned long))))
+		    if ((ret = copy_to_user(argp, &dma[0].u_base, 
+                                    sizeof(unsigned long))))
 		    {
 			    return ret;
 		    }
@@ -369,33 +369,33 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		    // snooze user and empty queue
 		    if (k3.fill != k3.drain)
 		    {
-                wait_event_interruptible (unbind_snooze,
+                wait_event_interruptible(unbind_snooze,
                                  k3.fill == k3.drain);
 		    }
             // Unmap buffers.
 		    for (i = 0; i < DMA_BUFNUM; i++)
 		    {
-                vm_munmap (dma[i].u_base, DMA_BUFSIZE);
-                pci_free_consistent (k3.pdev, DMA_BUFSIZE,
+                vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+                pci_free_consistent(k3.pdev, DMA_BUFSIZE,
                              dma[i].k_base, dma[i].handle);
 		    }
-		    K_WRITE_REG (CONF_INTERRUPT, 0);
-		    free_irq (k3.pdev->irq, &k3);
-		    pci_disable_msi (k3.pdev);
+		    K_WRITE_REG(CONF_INTERRUPT, 0);
+		    free_irq(k3.pdev->irq, &k3);
+		    pci_disable_msi(k3.pdev);
 		    break;
 		}
         // Start a dma buffer.
 	    case START_DMA:
 		{
             // using copies to preserve return as an error value.
-		    if ((ret = copy_from_user (&count, argp, sizeof (unsigned int))))
+		    if ((ret = copy_from_user(&count, argp, sizeof(unsigned int))))
 		    {
 			    return ret;
 		    }
             // initiate transfer is the bulk of this function
-		    ret = initiate_transfer (count);
-		    if ((ret = copy_to_user (argp, &dma[ret].u_base, 
-                                    sizeof (unsigned long))))
+		    ret = initiate_transfer(count);
+		    if ((ret = copy_to_user(argp, &dma[ret].u_base, 
+                                    sizeof(unsigned long))))
 		    {
 			    return ret;
 		    }
@@ -408,25 +408,25 @@ long kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 /*
  * Open function for kernel module.
  */
-int kyouko3_open (struct inode *inode, struct file *fp)
+int kyouko3_open(struct inode *inode, struct file *fp)
 {
     // ioremap_wc is faster than ioremap on some hardware
-    k3.control.k_base = ioremap_wc (k3.control.p_base, k3.control.len);
-    k3.fb.k_base = ioremap_wc (k3.fb.p_base, k3.fb.len);
-    fifo_init ();
+    k3.control.k_base = ioremap_wc(k3.control.p_base, k3.control.len);
+    k3.fb.k_base = ioremap_wc(k3.fb.p_base, k3.fb.len);
+    fifo_init();
     return 0;
 }
 
 /*
  * Release function for kernel module.
  */
-int kyouko3_release (struct inode *inode, struct file *fp)
+int kyouko3_release(struct inode *inode, struct file *fp)
 {
     kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
     fifo_flush();
-    iounmap (k3.control.k_base);
-    iounmap (k3.fb.k_base);
-    pci_free_consistent (k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
+    iounmap(k3.control.k_base);
+    iounmap(k3.fb.k_base);
+    pci_free_consistent(k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
     return 0;
 }
 
@@ -434,7 +434,7 @@ int kyouko3_release (struct inode *inode, struct file *fp)
  * Memory mapping function. Maps to control region, framebuffer, or DMA
  * buffers.
  */
-int kyouko3_mmap (struct file *fp, struct vm_area_struct *vma)
+int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 {
     int ret = 0;
     unsigned long off;
@@ -450,21 +450,21 @@ int kyouko3_mmap (struct file *fp, struct vm_area_struct *vma)
 	    case VM_PGOFF_CONTROL:
 		{
 		    ret =
-			vm_iomap_memory (vma, k3.control.p_base,
+			vm_iomap_memory(vma, k3.control.p_base,
 					 k3.control.len);
 		    break;
 		}
         // Framebuffer
 	    case VM_PGOFF_FB:
 		{
-		    ret = vm_iomap_memory (vma, k3.fb.p_base, k3.fb.len);
+		    ret = vm_iomap_memory(vma, k3.fb.p_base, k3.fb.len);
 		    break;
 		}
         // DMA
 	    case VM_PGOFF_DMA:
 		{
 		    ret =
-			vm_iomap_memory (vma, dma[k3.fill].handle, DMA_BUFSIZE);
+			vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
 		    break;
 		}
     }
@@ -488,15 +488,15 @@ struct cdev kyouko3_dev;
 /*
  * Probe function.
  */
-int kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
+int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 {
     k3.pdev = pdev;
 
-    k3.control.p_base = pci_resource_start (pdev, 1);
-    k3.control.len = pci_resource_len (pdev, 1);
+    k3.control.p_base = pci_resource_start(pdev, 1);
+    k3.control.len = pci_resource_len(pdev, 1);
 
-    k3.fb.p_base = pci_resource_start (pdev, 2);
-    k3.fb.len = pci_resource_len (pdev, 2);
+    k3.fb.p_base = pci_resource_start(pdev, 2);
+    k3.fb.len = pci_resource_len(pdev, 2);
 
     return 0;
 }
@@ -504,16 +504,16 @@ int kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
 /*
  * Remove function.
  */
-void kyouko3_remove (struct pci_dev *pdev)
+void kyouko3_remove(struct pci_dev *pdev)
 {
-    pci_disable_device (pdev);
+    pci_disable_device(pdev);
 }
 
 /*
  * Device ids.
  */
 struct pci_device_id kyouko3_dev_ids[] = {
-    {PCI_DEVICE (PCI_VENDOR_ID_CCORSI, PCI_DEVICE_ID_CCORSI_KYOUKO3)},
+    {PCI_DEVICE(PCI_VENDOR_ID_CCORSI, PCI_DEVICE_ID_CCORSI_KYOUKO3)},
     {0}
 };
 
@@ -530,26 +530,26 @@ struct pci_driver kyouko3_pci_drv = {
 /*
  * Basic init function.
  */
-int kyouko3_init (void)
+int kyouko3_init(void)
 {
     int ret;
-    cdev_init (&kyouko3_dev, &kyouko3_fops);
-    cdev_add (&kyouko3_dev, MKDEV (500, 127), 1);
+    cdev_init(&kyouko3_dev, &kyouko3_fops);
+    cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
     k3.dma_on = 0;
     ret = pci_register_driver(&kyouko3_pci_drv);
-    ret = pci_enable_device (k3.pdev);
-    pci_set_master (k3.pdev);
+    ret = pci_enable_device(k3.pdev);
+    pci_set_master(k3.pdev);
     return ret;
 }
 
 /*
  * Basic exit function.
  */
-void kyouko3_exit (void)
+void kyouko3_exit(void)
 {
-    cdev_del (&kyouko3_dev);
-    pci_unregister_driver (&kyouko3_pci_drv);
+    cdev_del(&kyouko3_dev);
+    pci_unregister_driver(&kyouko3_pci_drv);
 }
 
-module_init (kyouko3_init);
-module_exit (kyouko3_exit);
+module_init(kyouko3_init);
+module_exit(kyouko3_exit);
