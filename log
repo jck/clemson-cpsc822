@@ -1,8 +1,1 @@
-/root/dev/822/kyouko3.c: In function ‘dma_isr’:
-/root/dev/822/kyouko3.c:123:5: warning: format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘dma_addr_t’ [-Wformat=]
-     printk(KERN_ALERT "k3.drain = %xl", dma[k3.drain].handle);
-     ^
-/root/dev/822/kyouko3.c: In function ‘initiate_transfer’:
-/root/dev/822/kyouko3.c:196:7: warning: format ‘%x’ expects argument of type ‘unsigned int’, but argument 2 has type ‘dma_addr_t’ [-Wformat=]
-       printk(KERN_ALERT "dma[k3.drain] = %xl", dma[k3.drain].handle); 
-       ^
+make: *** /usr/src/linux: No such file or directory.  Stop.

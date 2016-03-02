@@ -6,6 +6,11 @@ struct fifo_entry {
   __u32 value;
 };
 
+struct dma_req {
+	unsigned int *u_base;
+	__u32 count;
+};
+
 struct kyouko3_dma_hdr {
   __u32 stride:5;
   __u32 w:1;

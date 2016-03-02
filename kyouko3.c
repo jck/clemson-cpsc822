@@ -226,11 +226,13 @@ int initiate_transfer(unsigned long size)
     return ret;
 }
 
-long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
+static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
+  struct dma_req req;
   void __user *argp = (void __user *)arg;
   int i;
-  unsigned long ret = 0;
+  int ret;
+  //int ret;
   printk(KERN_ALERT "ioctl called."); 
 
   switch(cmd) {
@@ -290,13 +292,11 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
     case BIND_DMA:
           k3.dma_on = 1;
           pr_info("BIND_DMA\n");
-          if (ret = pci_enable_msi(k3.pdev)) {
+          if (pci_enable_msi(k3.pdev)) {
             pr_warn("pci_enable_msi failed\n");
-            return ret;
           }
-          if (ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED, "kyouku3 dma isr", &k3)) {
+          if (request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED, "kyouku3 dma isr", &k3)) {
             pr_warn("request_irq failed\n");
-            return ret;
           }
           K_WRITE_REG(CONF_INTERRUPT, 0x02);
 
@@ -307,11 +307,9 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           }
           k3.fill = 0;
           k3.drain = 0;
-          //ret = dma[0].u_base;
-          if (ret = copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
+          if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
-  	      printk (KERN_ALERT "DMA_U_BASE %lx", (unsigned long) ret);
 	  printk(KERN_ALERT "bind_dma"); 
       break;
     case UNBIND_DMA:
@@ -333,16 +331,16 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
       break;
     case START_DMA:
           printk(KERN_ALERT "start_dma"); 
-          //if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
-          //  return -EFAULT;
-          //}
-          ret = initiate_transfer(arg);
-          if (ret = copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
+          if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
+            return -EFAULT;
+          }
+          ret = initiate_transfer(req.count);
+          if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
       break;
   }
-  return ret;
+  return 0;
 }
 
 struct file_operations kyouko3_fops = {
