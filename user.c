@@ -229,13 +229,13 @@ int main() {
   fprintf(fp, "dma_triangle\n");
   fprintf(fp, "DMA_Triangle complete\n");
   
-  for (int i = 0; i < 100; i++)
+  for (int i = 0; i < 8; i++)
   {
     fprintf(fp, "rand_triangle %d\n", i);
     arg = rand_dma_triangle(arg);
   }
   fifo_flush();
-//  sleep(6);
+  sleep(6);
   // UNBIND_DMA
   unbind_dma();
   
