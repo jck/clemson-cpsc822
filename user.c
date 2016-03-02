@@ -132,7 +132,6 @@ fifo_triangle ()
 unsigned long
 rand_dma_triangle (unsigned long arg)
 {
-    printf ("Drawing triangle using DMA\n");
     float triangle[3][6] = {
 	{1.0, 0, 0, 0.5, 0.5, 0},
 	{0, 1.0, 0, 0.5, 0, 0},
@@ -142,7 +141,6 @@ rand_dma_triangle (unsigned long arg)
     unsigned long c = 0;
     unsigned int *buf = (unsigned int *) arg;
 
-    printf ("DMA u_base: %lx\n", arg);
     struct kyouko3_dma_hdr hdr = {
 	.stride = 5,
 	.rgb = 1,
@@ -186,7 +184,6 @@ int
 main ()
 {
     kyouko3.fd = open ("/dev/kyouko3", O_RDWR);
-    fprintf (fp, "char device open\n");
     kyouko3.u_control_base =
 	    mmap (0, KYOUKO_CONTROL_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED,
 	      kyouko3.fd, VM_PGOFF_CONTROL);
@@ -232,7 +229,6 @@ main ()
     ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
 
     // cleanup
-    fclose (fp);
     close (kyouko3.fd);
     return 0;
 }
