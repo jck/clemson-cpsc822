@@ -174,10 +174,8 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
     int size;
     u32 iflags = K_READ_REG (INFO_STATUS);
 
-    pr_info ("DMA ISR. Flags: %x\n", iflags);
     K_WRITE_REG (INFO_STATUS, 0xf);
 
-    printk (KERN_ALERT "Interrupt handler.");
     // spurious interrupt
     if ((iflags & 0x02) == 0)
     {
@@ -490,7 +488,6 @@ struct cdev kyouko3_dev;
 int
 kyouko3_probe (struct pci_dev *pdev, const struct pci_device_id *pci_id)
 {
-    pr_info ("kyouko3 probe\n");
     k3.pdev = pdev;
 
     k3.control.p_base = pci_resource_start (pdev, 1);
@@ -536,7 +533,6 @@ struct pci_driver kyouko3_pci_drv = {
 int
 kyouko3_init (void)
 {
-    pr_info ("kyouko3_init");
     cdev_init (&kyouko3_dev, &kyouko3_fops);
     cdev_add (&kyouko3_dev, MKDEV (500, 127), 1);
     k3.dma_on = 0;
@@ -551,7 +547,6 @@ kyouko3_exit (void)
 {
     cdev_del (&kyouko3_dev);
     pci_unregister_driver (&kyouko3_pci_drv);
-    pr_info ("kyouko3_exit\n");
 }
 
 module_init (kyouko3_init);
