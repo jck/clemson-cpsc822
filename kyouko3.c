@@ -336,7 +336,7 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           //if (copy_from_user(&req.count, argp, sizeof(unsigned int))) {
           //  return -EFAULT;
           //}
-          ret = dma[initiate_transfer(arg)].u_base;
+          ret = initiate_transfer(arg);
           if (ret = copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
             pr_info("ctu fail\n");
           }
