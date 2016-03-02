@@ -274,6 +274,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
     void __user *argp = (void __user *) arg;
     int i;
     long ret;
+    int count;
 
     printk (KERN_ALERT "ioctl called.");
 
@@ -409,7 +410,7 @@ kyouko3_ioctl (struct file *fp, unsigned int cmd, unsigned long arg)
 		{
 		    printk (KERN_ALERT "start_dma");
 		    if (ret =
-			copy_from_user (&req.count, argp,
+			copy_from_user (&count, argp,
 					sizeof (unsigned int)))
 		    {
 			return ret;
