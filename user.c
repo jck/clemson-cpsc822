@@ -111,7 +111,7 @@ unsigned long dma_triangle(unsigned long arg) {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  ioctl(kyouko3.fd, START_DMA, &arg);
+  arg = ioctl(kyouko3.fd, START_DMA, arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
   return arg;
@@ -148,7 +148,7 @@ unsigned long dma_triangle2(unsigned long arg) {
   }
   // unsigned long dc = (buf - req.u_base)*sizeof(unsigned int);
   arg = c*4;
-  ioctl(kyouko3.fd, START_DMA, &arg);
+  arg = ioctl(kyouko3.fd, START_DMA, arg);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
   return arg;
@@ -197,7 +197,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   }
   arg = c*4;
   hdr.count = vertices;
-  ioctl(kyouko3.fd, START_DMA, &arg);
+  arg = ioctl(kyouko3.fd, START_DMA, arg);
   fifo_queue(RASTER_FLUSH, 0);
   return arg;
 }
