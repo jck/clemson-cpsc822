@@ -171,7 +171,6 @@ fifo_write (u32 cmd, u32 val)
 irqreturn_t
 dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 {
-    int full;
     int empty;
     int size;
     u32 iflags = K_READ_REG (INFO_STATUS);
@@ -184,7 +183,6 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
 	    return IRQ_NONE;
     }
     // Check if all buffers full when interrupt was called.
-    full = k3.fill == k3.drain;
     k3.drain = (k3.drain + 1) % DMA_BUFNUM;
     // Check if buffers are now empty.
     empty = k3.fill == k3.drain;
@@ -205,9 +203,9 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
         }
     }
     // Wake up sleeping user if buffer was full.
-    if (full)
+    if (k3.full)
     {
-        full = 0;
+        k3.full = 0;
 	    wake_up_interruptible (&dma_snooze);
     }
     // if not-spurious, then 
@@ -246,8 +244,6 @@ initiate_transfer (unsigned long size)
     spin_unlock_irqrestore (&dma_snooze.lock, flags);
     if (k3.full)
     {
-	    //release lock while asleep, but do condition testing w/ lock
-        //thanks to interruptible_locked.
 	    wait_event_interruptible(dma_snooze, !k3.full);
     }
     return ret;
