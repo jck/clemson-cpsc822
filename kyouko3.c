@@ -543,7 +543,7 @@ kyouko3_init (void)
     ret = pci_register_drive(&kyouko3_pci_drv);
     pci_enable_device (pdev);
     pci_set_master (pdev);
-    return ret
+    return ret;
 }
 
 /*
