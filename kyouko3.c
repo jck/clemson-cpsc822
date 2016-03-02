@@ -307,10 +307,10 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           }
           k3.fill = 0;
           k3.drain = 0;
-          ret = dma[0].u_base;
-          //if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
-          //  pr_info("ctu fail\n");
-          //}
+          //ret = dma[0].u_base;
+          if (ret = copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
+            pr_info("ctu fail\n");
+          }
   	      printk (KERN_ALERT "DMA_U_BASE %lx", (unsigned long) ret);
 	  printk(KERN_ALERT "bind_dma"); 
       break;
@@ -337,9 +337,9 @@ long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
           //  return -EFAULT;
           //}
           ret = dma[initiate_transfer(arg)].u_base;
-          //if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
-          //  pr_info("ctu fail\n");
-          //}
+          if (ret = copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long))) {
+            pr_info("ctu fail\n");
+          }
       break;
   }
   return ret;
