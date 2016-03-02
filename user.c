@@ -1,3 +1,14 @@
+/*
+ * Authors: Praarthana Ramakrishnan, Keerthan Jaic, Tyler Allen, 
+ *          Sriram Madhivanan
+ *
+ * Version: 03/02/2016
+ *
+ * This is some test user code for the kyouko3 driver. It will draw a red 
+ * line using the framebuffer, followed by a triangle using the fifo, followed
+ * by many random triangles using DMA.
+ */ 
+
 #include <stdio.h>
 #include <errno.h>
 #include <math.h>
@@ -9,6 +20,9 @@
 
 #include "kyouko3.h"
 
+/*
+ * Container for briefly storing dma information.
+ */
 struct dma_req
 {
     unsigned int *u_base;
@@ -93,7 +107,7 @@ fifo_triangle ()
     };
 
     fifo_queue (COMMAND_PRIMITIVE, 1);
-
+    
     for (int i = 0; i < 3; i++)
     {
         float *pos = triangle[i][0];
@@ -139,6 +153,7 @@ rand_dma_triangle (unsigned long arg)
     buf[c] = *(unsigned int *) &hdr;
     c++;
     
+    // Generate random triangles
     while (c * 4 < DMA_BUFSIZE)
     {
         vertices += 3;
@@ -199,7 +214,7 @@ main ()
 
     //BIND_DMA
     ioctl (kyouko3.fd, BIND_DMA, &arg);
-
+    srand(time(NULL));
     for (int i = 0; i < 100; i++)
     {
     	arg = rand_dma_triangle (arg);
