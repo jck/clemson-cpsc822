@@ -226,12 +226,11 @@ int initiate_transfer(unsigned long size)
     return ret;
 }
 
-static long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
+static unsigned long kyouko3_ioctl(struct file* fp, unsigned int cmd, unsigned long arg){
   struct fifo_entry entry;
-  struct dma_req req;
   void __user *argp = (void __user *)arg;
   int i;
-  int ret = 0;
+  unsigned long ret = 0;
   printk(KERN_ALERT "ioctl called."); 
 
   switch(cmd) {

@@ -169,7 +169,7 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   int vertices = 0;
   unsigned long c = 0;
   unsigned  int* buf = (unsigned int *)arg;
-  printf("DMA u_base: %lx\n", arg);
+  fprintf(stderr, "DMA u_base: %lx\n", arg);
   struct kyouko3_dma_hdr hdr = {
 	.stride = 5,
 	.rgb = 1,
@@ -179,7 +179,8 @@ unsigned long rand_dma_triangle(unsigned long arg) {
   };
   struct dma_req req;
   // bind_dma(&req);
-  printf("DMA hdr: %u\n", hdr);
+  fprintf(stderr, "DMA hdr: %u\n", hdr);
+  fprintf(stderr, "buf: %u\n", buf);
   buf[c] = *(unsigned int*)&hdr;
   c++;
   while (c * 4 < DMA_BUFSIZE) // (76 * 4)
@@ -209,16 +210,12 @@ unsigned long rand_dma_triangle(unsigned long arg) {
 
 
 int main() {
-  FILE* fp = fopen("runlog", "w");
-
   kyouko3.fd = open("/dev/kyouko3", O_RDWR);
-  fprintf(fp, "char device open\n");
   kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, VM_PGOFF_CONTROL);
   kyouko3.u_fb_base = mmap(0, U_READ_REG(Device_RAM)*1024*1024, PROT_READ|PROT_WRITE,
       MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
   ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
-  fprintf(fp, "graphics on\n");
 //  draw_line_fb();
 //  sleep(2);
 //  fifo_triangle();
@@ -226,17 +223,15 @@ int main() {
 
   //BIND_DMA
   unsigned long arg = 0;
-  ioctl(kyouko3.fd, BIND_DMA, &arg);
+  arg = ioctl(kyouko3.fd, BIND_DMA, arg);
   //arg = dma_triangle(arg);
   //sleep(2);
   //arg = dma_triangle2(arg);
   //sleep(2);
-  fprintf(fp, "dma_triangle\n");
-  fprintf(fp, "DMA_Triangle complete\n");
   
   for (int i = 0; i < 8; i++)
   {
-    fprintf(fp, "rand_triangle %d\n", i);
+    fprintf(stderr, "i, arg: %d, %xl\n", i, arg);
     arg = rand_dma_triangle(arg);
   }
   fifo_flush();
@@ -245,10 +240,7 @@ int main() {
   unbind_dma();
   
   
-  fprintf(fp, "triangle done\n");
   ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
-  fprintf(fp, "VMODE_OFF\n");
-  fclose(fp);
   close(kyouko3.fd);
   return 0;
 }
