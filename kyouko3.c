@@ -87,6 +87,8 @@ struct kyouko3_vars
     u32 fill;
     // next dma buffer to drain.
     u32 drain;
+    // If DMA is full
+    bool full;
 } k3;
 
 
@@ -195,9 +197,13 @@ dma_isr (int irq, void *dev_id, struct pt_regs *regs)
         K_WRITE_REG (FIFO_HEAD, k3.fifo.head);
     }
     // Buffer is empty and dma is off, we are shutting down so wake user.
-    else if (!k3.dma_on)
+    else
     {
-	    wake_up_interruptible (&unbind_snooze);
+        full = 0;
+        if (!k3.dma_on)
+        {
+	        wake_up_interruptible (&unbind_snooze);
+        }
     }
     // Wake up sleeping user if buffer was full.
     if (full)
@@ -236,11 +242,11 @@ initiate_transfer (unsigned long size)
     // SET LOCKED RETURN VALUE
     k3.fill = (k3.fill + 1) % DMA_BUFNUM;
     ret = k3.fill;
-    if (k3.fill == k3.drain)
+    if ((k3.full = k3.fill == k3.drain))
     {
 	    //release lock while asleep, but do condition testing w/ lock
         //thanks to interruptible_locked.
-	    wait_event_interruptible_locked (dma_snooze, k3.fill != k3.drain);
+	    wait_event_interruptible(dma_snooze, !k3.full);
     }
     spin_unlock_irqrestore (&dma_snooze.lock, flags);
     return ret;
