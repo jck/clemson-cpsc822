@@ -185,8 +185,6 @@ rand_dma_triangle (unsigned long arg)
 int
 main ()
 {
-    FILE *fp = fopen ("runlog", "w");
-
     kyouko3.fd = open ("/dev/kyouko3", O_RDWR);
     fprintf (fp, "char device open\n");
     kyouko3.u_control_base =
