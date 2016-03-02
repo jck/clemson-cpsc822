@@ -1,26 +1,23 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 
-struct fifo_entry {
-  __u32 command;
-  __u32 value;
+struct fifo_entry
+{
+    __u32 command;
+    __u32 value;
 };
 
-struct dma_req {
-	unsigned int *u_base;
-	__u32 count;
-};
+struct kyouko3_dma_hdr
+{
+    __u32 stride:5;
+    __u32 w:1;
+    __u32 rgb:1;
+    __u32 unknown:5;
+    __u32 b12:1;
+    __u32 b13:1;
 
-struct kyouko3_dma_hdr {
-  __u32 stride:5;
-  __u32 w:1;
-  __u32 rgb:1;
-  __u32 unknown:5;
-  __u32 b12:1;
-  __u32 b13:1;
-
-  __u32 count:10;
-  __u32 opcode:8;
+    __u32 count:10;
+    __u32 opcode:8;
 };
 
 #define PCI_VENDOR_ID_CCORSI 0x1234
