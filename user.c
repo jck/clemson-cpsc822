@@ -96,15 +96,15 @@ fifo_triangle ()
 
     for (int i = 0; i < 3; i++)
     {
-	float *pos = triangle[i][0];
-	float *col = triangle[i][1];
+        float *pos = triangle[i][0];
+        float *col = triangle[i][1];
 
-	for (int j = 0; j < 4; j++)
-	{
-	    fifo_queue (VERTEX_COORD + 4 * j, *(unsigned int *) &pos[j]);
-	    fifo_queue (VERTEX_COLOR + 4 * j, *(unsigned int *) &col[j]);
-	}
-	fifo_queue (VERTEX_EMIT, 0);
+        for (int j = 0; j < 4; j++)
+        {
+            fifo_queue (VERTEX_COORD + 4 * j, *(unsigned int *) &pos[j]);
+            fifo_queue (VERTEX_COLOR + 4 * j, *(unsigned int *) &col[j]);
+        }
+        fifo_queue (VERTEX_EMIT, 0);
     }
     fifo_queue (COMMAND_PRIMITIVE, 0);
     fifo_queue (RASTER_FLUSH, 0);
@@ -186,13 +186,13 @@ main ()
     ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     draw_line_fb();
     sleep(2);
-    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    //ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
     // draw fifo triangle
     sleep(2);
-    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    //ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
     fifo_triangle();
     sleep(2);
-    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    //ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
     sleep(2);
     
     // show off DMA
