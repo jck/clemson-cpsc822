@@ -195,21 +195,21 @@ main ()
 	      MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
 
     // draw line
-    // printf ("Drawing line by writing to FB\n");
-    // sleep(2);
-    // ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
-    // draw_line_fb();
-    // sleep(2);
-    // ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
-    // // draw fifo triangle
-    // sleep(2);
+    printf ("Drawing line by writing to FB\n");
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    draw_line_fb();
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    // draw fifo triangle
+    sleep(2);
 
-    // printf ("Drawing triangle by queing FIFO cmds\n");
-    // sleep(2);
-    // ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
-    // fifo_triangle();
-    // sleep(2);
-    // ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    printf ("Drawing triangle by queing FIFO cmds\n");
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
+    fifo_triangle();
+    sleep(2);
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
 
 
     printf ("Drawing random triangles with dma.\n");
@@ -226,13 +226,12 @@ main ()
     	arg = rand_dma_triangle (arg);
     }
     fifo_flush ();
-    close (kyouko3.fd);
-    // sleep(6);
-    // // UNBIND_DMA
-    // unbind_dma ();
-    // ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+    sleep(6);
+    // UNBIND_DMA
+    unbind_dma ();
+    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
 
-    // // cleanup
+    // cleanup
     close (kyouko3.fd);
     return 0;
 }
