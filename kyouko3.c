@@ -95,6 +95,7 @@ void fifo_init(void)
 
 void fifo_flush(void)
 {
+	pr_info("fifo flush\n");
 	K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	while (k3.fifo.tail_cache != k3.fifo.head) {
 		k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
@@ -136,14 +137,20 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	empty = k3.fill == k3.drain;
 
 	if (!empty) {
+		pr_info("irq: not empty\n");
 		// Queue is not empty. Dispatch the next buffer
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	} else {
+		pr_info("irq: empty\n");
 		// Queue is empty. Wake up unbind_dma
 		if (!k3.dma_on) {
+			pr_info("irq: wuius %d %d \n", k3.fill, k3.drain);
+			spin_unlock(&k3.lock);
+			pr_info("irq: wake unbind_snooze\n");
 			wake_up_interruptible(&unbind_snooze);
+			return IRQ_HANDLED;
 		}
 	}
 
@@ -240,6 +247,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	int i;
 	long ret = 0;
 	int count;
+	unsigned long flags;
 
 	switch (cmd) {
 	case VMODE:
@@ -276,11 +284,13 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		// disable graphics mode.
 		else if (arg == GRAPHICS_OFF) {
+			pr_info("gfx off\n");
 			if (k3.dma_on) {
 				kyouko3_ioctl(fp, UNBIND_DMA, 0);
 			} else {
 				fifo_flush();
 			}
+			pr_info("gfx offf\n");
 			K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
 			K_WRITE_REG(CONF_MODESET, 0);
 			k3.graphics_on = 0;
@@ -305,13 +315,21 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		return 0;
 	case UNBIND_DMA:
+		pr_info("unbind dma\n");
 		// set flag to wake up user when buffer is empty
+		spin_lock_irqsave(&k3.lock, flags);
+		pr_info("dmaon = 0 %d %d \n", k3.fill, k3.drain);
 		k3.dma_on = 0;
 		// snooze user and empty queue
 		if (k3.fill != k3.drain) {
+			spin_unlock_irqrestore(&k3.lock, flags);
+			pr_info("ubdma wait\n");
 			wait_event_interruptible(unbind_snooze,
 						 k3.fill == k3.drain);
+		} else {
+			spin_unlock_irqrestore(&k3.lock, flags);
 		}
+		pr_info("unbind dmaaa\n");
 		// Unmap buffers.
 		for (i = 0; i < DMA_BUFNUM; i++) {
 			vm_munmap(dma[i].u_base, DMA_BUFSIZE);
