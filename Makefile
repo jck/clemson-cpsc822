@@ -1,15 +1,33 @@
+HOST=$(shell hostname)
+
+ifeq ($(HOST), serenity)
+	KDIR = /home/jck/projects/822/build
+else
+	KDIR = /usr/src/linux
+endif
+
 obj-m += kyouko3.o
+ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
-default:
-	-mknod /dev/kyouko3 c $$major 500 $$minor 127
-	$(MAKE) -C /usr/src/linux M=$(PWD) modules 2> log
-	gcc -std=gnu99 -g -Wall -Wextra user.c 2> ulog #tester.c
-	-rmmod kyouko3
-	insmod kyouko3.ko
+all: module user
+r: rmod ruser
 
+.PHONY: module
+module:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+user: user.c
+	gcc -std=gnu99 -o user user.c
+
+.PHONY: rmod
+rmod: module
+	rsync kyouko3.ko 822:
+	ssh 822 'rmmod kyouko3; insmod kyouko3.ko'
+
+.PHONY: ruser
+ruser: user
+	rsync user 822:
+	ssh 822 ./user
 
 clean:
-	-rm *.ko
-	-rm *.o
-	-rm *.mod.c
-	-rm *.out
+	rm *.ko *.o *.mod.c
