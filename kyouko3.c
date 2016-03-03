@@ -434,7 +434,10 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 /*
  * Remove function.
  */
-void kyouko3_remove(struct pci_dev *pdev) { pci_disable_device(pdev); }
+void kyouko3_remove(struct pci_dev *pdev)
+{
+	pci_disable_device(pdev);
+}
 
 /*
  * Device ids.
