@@ -7,7 +7,7 @@ else
 endif
 
 obj-m += kyouko3.o
-ccflags-y := -std=gnu99 -Wno-declaration-after-statement
+# ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
 all: module user
 r: rmod ruser

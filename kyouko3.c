@@ -200,6 +200,9 @@ void initiate_transfer(unsigned long size)
 /* Set up pci interrupts and dma buffers */
 int dma_init(struct file *fp)
 {
+	int i;
+	int ret = 0;
+
 	// If dma was already on, skip the initialization.
 	// re-running the buffer allocation loop will cause us to lose the old
 	// dma handles and they would never be freed.
@@ -207,7 +210,6 @@ int dma_init(struct file *fp)
 		return 0;
 	}
 
-	int ret = 0;
 	ret = pci_enable_msi(k3.pdev);
 	if (ret) {
 		pr_warn("pci_enable_msi failed\n");
@@ -221,7 +223,7 @@ int dma_init(struct file *fp)
 		return ret;
 	}
 
-	for (int i = 0; i < DMA_BUFNUM; i++) {
+	for (i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
 		dma[i].k_base =
 		    pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
