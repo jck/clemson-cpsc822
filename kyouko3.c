@@ -233,10 +233,8 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case FIFO_QUEUE:
-		if ((ret = copy_from_user(&entry, argp,
-					  sizeof(struct fifo_entry)))) {
+		if (copy_from_user(&entry, argp, sizeof(struct fifo_entry)))
 			return -EFAULT;
-		}
 		fifo_write(entry.command, entry.value);
 		break;
 	case FIFO_FLUSH:
@@ -290,17 +288,12 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		pci_disable_msi(k3.pdev);
 		break;
 	case START_DMA:
-		// using copies to preserve return as an error value.
-		if ((ret =
-			 copy_from_user(&count, argp, sizeof(unsigned int)))) {
-			return ret;
-		}
+		if (copy_from_user(&count, argp, sizeof(unsigned int)))
+			return -EFAULT;
 		// initiate transfer is the bulk of this function
 		ret = initiate_transfer(count);
-		if ((ret = copy_to_user(argp, &dma[ret].u_base,
-					sizeof(unsigned long)))) {
-			return ret;
-		}
+		if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long)))
+			return -EFAULT;
 		break;
 	}
 	return ret;
