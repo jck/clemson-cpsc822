@@ -64,6 +64,14 @@ struct kyouko3_vars {
 	spinlock_t lock;
 } k3;
 
+/* Efficient way to increment index of circ buffer whose size is a power of two.
+ * Equivalent to (idx + 1) % size
+ * Inspired by Documentation/circ-buf.txt */
+static inline void inc_dmabuf_idx(u32 *idx)
+{
+	*idx = (*idx + 1) & (DMA_BUFNUM - 1);
+}
+
 static inline void K_WRITE_REG(u32 reg, u32 value)
 {
 	*(k3.control.k_base + (reg >> 2)) = value;
@@ -119,7 +127,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 		return IRQ_NONE;
 	}
 	// Check if all buffers full when interrupt was called.
-	k3.drain = (k3.drain + 1) % DMA_BUFNUM;
+	inc_dmabuf_idx(&k3.drain);
 	// Check if buffers are now empty.
 	empty = k3.fill == k3.drain;
 	// If buffers left in queue, start next one
@@ -156,7 +164,7 @@ int initiate_transfer(unsigned long size)
 	dma[k3.fill].size = size;
 	if (k3.fill == k3.drain) {
 		// SET LOCKED RETURN VALUE
-		k3.fill = (k3.fill + 1) % DMA_BUFNUM;
+		inc_dmabuf_idx(&k3.fill);
 		ret = k3.fill;
 
 		// push next item to card.
@@ -168,7 +176,7 @@ int initiate_transfer(unsigned long size)
 		return ret;
 	}
 	// SET LOCKED RETURN VALUE
-	k3.fill = (k3.fill + 1) % DMA_BUFNUM;
+	inc_dmabuf_idx(&k3.fill);
 	ret = k3.fill;
 	k3.full = k3.fill == k3.drain;
 	spin_unlock_irqrestore(&k3.lock, flags);
