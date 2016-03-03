@@ -67,7 +67,7 @@ struct kyouko3_vars {
 /* Efficient way to increment index of circ buffer whose size is a power of two.
  * Equivalent to (idx + 1) % size
  * Inspired by Documentation/circ-buf.txt */
-static inline void inc_dmabuf_idx(u32 *idx)
+static inline void dmaq_inc_idx(u32 *idx)
 {
 	*idx = (*idx + 1) & (DMA_BUFNUM - 1);
 }
@@ -131,7 +131,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	spin_lock(&k3.lock);
 
 	// we are ready to drain the next buffer
-	inc_dmabuf_idx(&k3.drain);
+	dmaq_inc_idx(&k3.drain);
 
 	empty = k3.fill == k3.drain;
 
@@ -175,14 +175,14 @@ int initiate_transfer(unsigned long size)
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
-		inc_dmabuf_idx(&k3.fill);
+		dmaq_inc_idx(&k3.fill);
 		ret = k3.fill;
 
 		spin_unlock_irqrestore(&k3.lock, flags);
 		return ret;
 	}
 
-	inc_dmabuf_idx(&k3.fill);
+	dmaq_inc_idx(&k3.fill);
 	ret = k3.fill;
 	// Next buf is still being drained. Queue is full.
 	k3.full = k3.fill == k3.drain;
