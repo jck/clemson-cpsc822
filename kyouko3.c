@@ -241,7 +241,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	int count;
 
 	switch (cmd) {
-	case VMODE: {
+	case VMODE:
 		// init graphics mode
 		if (arg == GRAPHICS_ON) {
 
@@ -286,23 +286,20 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			k3.graphics_on = 0;
 		}
 		break;
-	}
 	// Add item to fifo queue.
-	case FIFO_QUEUE: {
+	case FIFO_QUEUE:
 		if ((ret = copy_from_user(&entry, argp,
 					  sizeof(struct fifo_entry)))) {
 			return -EFAULT;
 		}
 		fifo_write(entry.command, entry.value);
 		break;
-	}
 	// Sync software fifo with hardware fifo.
-	case FIFO_FLUSH: {
+	case FIFO_FLUSH:
 		fifo_flush();
 		break;
-	}
 	// Bind DMA buffers to begin dma actions.
-	case BIND_DMA: {
+	case BIND_DMA:
 		k3.dma_on = 1;
 		// bail if we can't init
 		if ((ret = pci_enable_msi(k3.pdev))) {
@@ -331,9 +328,8 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			return ret;
 		}
 		break;
-	}
 	// Finish DMA and de-queue buffers.
-	case UNBIND_DMA: {
+	case UNBIND_DMA:
 		// set flag to wake up user when buffer is empty
 		k3.dma_on = 0;
 		// snooze user and empty queue
@@ -351,9 +347,8 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		free_irq(k3.pdev->irq, &k3);
 		pci_disable_msi(k3.pdev);
 		break;
-	}
 	// Start a dma buffer.
-	case START_DMA: {
+	case START_DMA:
 		// using copies to preserve return as an error value.
 		if ((ret =
 			 copy_from_user(&count, argp, sizeof(unsigned int)))) {
@@ -366,7 +361,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			return ret;
 		}
 		break;
-	}
 	}
 	return ret;
 }
@@ -412,20 +406,17 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 	vma->vm_pgoff = 0;
 	switch (off) {
 	// Control region
-	case VM_PGOFF_CONTROL: {
+	case VM_PGOFF_CONTROL:
 		ret = vm_iomap_memory(vma, k3.control.p_base, k3.control.len);
 		break;
-	}
 	// Framebuffer
-	case VM_PGOFF_FB: {
+	case VM_PGOFF_FB:
 		ret = vm_iomap_memory(vma, k3.fb.p_base, k3.fb.len);
 		break;
-	}
 	// DMA
-	case VM_PGOFF_DMA: {
+	case VM_PGOFF_DMA:
 		ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
 		break;
-	}
 	}
 	return ret;
 }
