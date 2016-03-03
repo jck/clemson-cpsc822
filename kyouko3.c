@@ -186,6 +186,34 @@ int initiate_transfer(unsigned long size)
 	return ret;
 }
 
+int dma_init(struct file *fp)
+{
+	int i, ret;
+	k3.dma_on = 1;
+	// bail if we can't init
+	if ((ret = pci_enable_msi(k3.pdev))) {
+		return ret;
+	}
+	if ((ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr,
+			       IRQF_SHARED, "kyouku3 dma isr", &k3))) {
+		return ret;
+	}
+	K_WRITE_REG(CONF_INTERRUPT, 0x02);
+	// acquire dma buffers
+	for (i = 0; i < DMA_BUFNUM; i++) {
+		k3.fill = i;
+		dma[i].k_base =
+		    pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
+		dma[i].u_base =
+		    vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
+			    MAP_SHARED, VM_PGOFF_DMA);
+	}
+	// init dma queue counters.
+	k3.fill = 0;
+	k3.drain = 0;
+	return 0;
+}
+
 long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
 	struct fifo_entry entry;
@@ -248,29 +276,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		fifo_flush();
 		break;
 	case BIND_DMA:
-		k3.dma_on = 1;
-		// bail if we can't init
-		if ((ret = pci_enable_msi(k3.pdev))) {
-			return ret;
-		}
-		if ((ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr,
-				       IRQF_SHARED, "kyouku3 dma isr", &k3))) {
-			return ret;
-		}
-		K_WRITE_REG(CONF_INTERRUPT, 0x02);
-		// acquire dma buffers
-		for (i = 0; i < DMA_BUFNUM; i++) {
-			k3.fill = i;
-			dma[i].k_base = pci_alloc_consistent(
-			    k3.pdev, DMA_BUFSIZE, &dma[i].handle);
-			dma[i].u_base =
-			    vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
-				    MAP_SHARED, VM_PGOFF_DMA);
-		}
-		// init dma queue counters.
-		k3.fill = 0;
-		k3.drain = 0;
-		// copy back first address or bail if we fail.
+		ret = dma_init(fp);
 		if ((ret = copy_to_user(argp, &dma[0].u_base,
 					sizeof(unsigned long)))) {
 			return ret;
