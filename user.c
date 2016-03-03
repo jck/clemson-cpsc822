@@ -149,15 +149,14 @@ rand_dma_triangle (unsigned long arg)
 	.stride = 5,
 	.rgb = 1,
 	.b12 = 1,
-	.count = (DMA_BUFSIZE / 76),
 	.opcode = 0x14
     };
 
     buf[c] = *(unsigned int *) &hdr;
     c++;
-    
+
     // Generate random triangles
-    while (c * 4 < DMA_BUFSIZE)
+    while (c < 100)
     {
         vertices += 3;
         for (int i = 0; i < 3; i++)
