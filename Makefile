@@ -30,4 +30,4 @@ ruser: user
 	ssh 822 ./user
 
 clean:
-	rm *.ko *.o *.mod.c
+	rm -f *.ko *.o *.mod.c
