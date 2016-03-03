@@ -87,23 +87,12 @@ struct kyouko3_vars {
 	bool full;
 } k3;
 
-/*
- * Macro for writing to kyouko3 register.
- * Params:
- * reg - register to write to.
- * value - value to write to register.
- */
-inline void K_WRITE_REG(unsigned int reg, unsigned int value)
+static inline void K_WRITE_REG(u32 reg, u32 value)
 {
 	*(k3.control.k_base + (reg >> 2)) = value;
 }
 
-/*
- * Macro for reading from kyouko3 register.
- * Params:
- * reg - register to read.
- */
-inline unsigned int K_READ_REG(unsigned int reg)
+static inline u32 K_READ_REG(u32 reg)
 {
 	rmb();
 	return *(k3.control.k_base + (reg >> 2));
