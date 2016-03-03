@@ -152,11 +152,10 @@ rand_dma_triangle (unsigned long arg)
 	.opcode = 0x14
     };
 
-    buf[c] = *(unsigned int *) &hdr;
     c++;
 
     // Generate random triangles
-    while (c < 100)
+    while (c < 10000)
     {
         vertices += 3;
         for (int i = 0; i < 3; i++)
@@ -177,6 +176,7 @@ rand_dma_triangle (unsigned long arg)
     }
     arg = c * 4;
     hdr.count = vertices;
+    buf[0] = *(unsigned int *) &hdr;
     ioctl (kyouko3.fd, START_DMA, &arg);
     fifo_queue (RASTER_FLUSH, 0);
     return arg;
