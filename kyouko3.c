@@ -48,7 +48,7 @@ struct k3_dma_buf {
 	unsigned int *k_base;
 	unsigned long u_base;
 	dma_addr_t handle;
-	int current_size;
+	int size;
 } dma[DMA_BUFNUM];
 
 struct kyouko3_vars {
@@ -110,7 +110,6 @@ void fifo_write(u32 cmd, u32 val)
 irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 {
 	int empty;
-	int size;
 	u32 iflags = K_READ_REG(INFO_STATUS);
 
 	K_WRITE_REG(INFO_STATUS, 0xf);
@@ -125,9 +124,8 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	empty = k3.fill == k3.drain;
 	// If buffers left in queue, start next one
 	if (!empty) {
-		size = dma[k3.fill].current_size;
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
-		fifo_write(BUFA_CONF, size);
+		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	}
 	// Buffer is empty and dma is off, we are shutting down so wake user.
@@ -155,7 +153,7 @@ int initiate_transfer(unsigned long size)
 	// grab dma_snooze lock so that we can use
 	// wait_event_interruptible_locked.
 	spin_lock_irqsave(&k3.lock, flags);
-	dma[k3.fill].current_size = size;
+	dma[k3.fill].size = size;
 	if (k3.fill == k3.drain) {
 		// SET LOCKED RETURN VALUE
 		k3.fill = (k3.fill + 1) % DMA_BUFNUM;
@@ -163,7 +161,7 @@ int initiate_transfer(unsigned long size)
 
 		// push next item to card.
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
-		fifo_write(BUFA_CONF, size);
+		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
 		spin_unlock_irqrestore(&k3.lock, flags);
