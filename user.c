@@ -62,24 +62,28 @@ fifo_queue (unsigned int cmd, unsigned int val)
 static inline void
 fifo_flush ()
 {
+    printf("flushing fifo\n");
     ioctl (kyouko3.fd, FIFO_FLUSH, 0);
 }
 
 void
 bind_dma (struct dma_req *req)
 {
+    printf("bind dma\n");
     ioctl (kyouko3.fd, BIND_DMA, &req->u_base);
 }
 
 void
 start_dma (struct dma_req *req)
 {
+    printf("start dma\n");
     ioctl (kyouko3.fd, START_DMA, &req->u_base);
 }
 
 void
 unbind_dma (void)
 {
+    printf("unbind dma\n");
     ioctl (kyouko3.fd, UNBIND_DMA, 0);
 }
 
