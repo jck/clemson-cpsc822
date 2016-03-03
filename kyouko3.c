@@ -161,9 +161,8 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 /*
  * Initiate a DMA request if possible.
  */
-int initiate_transfer(unsigned long size)
+void initiate_transfer(unsigned long size)
 {
-	int ret;
 	unsigned long flags;
 
 	spin_lock_irqsave(&k3.lock, flags);
@@ -176,22 +175,19 @@ int initiate_transfer(unsigned long size)
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
 		dmaq_inc_idx(&k3.fill);
-		ret = k3.fill;
-
 		spin_unlock_irqrestore(&k3.lock, flags);
-		return ret;
+		return;
 	}
 
 	dmaq_inc_idx(&k3.fill);
-	ret = k3.fill;
 	// Next buf is still being drained. Queue is full.
 	k3.full = k3.fill == k3.drain;
 	spin_unlock_irqrestore(&k3.lock, flags);
 	if (k3.full) {
+		spin_unlock_irqrestore(&k3.lock, flags);
 		// Wait till a buffer is drained
 		wait_event_interruptible(dma_snooze, !k3.full);
 	}
-	return ret;
 }
 
 /* Set up pci interrupts and dma buffers */
@@ -330,8 +326,9 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		if (copy_from_user(&count, argp, sizeof(unsigned int)))
 			return -EFAULT;
 		// initiate transfer is the bulk of this function
-		ret = initiate_transfer(count);
-		if (copy_to_user(argp, &dma[ret].u_base, sizeof(unsigned long)))
+		initiate_transfer(count);
+		if (copy_to_user(argp, &dma[k3.fill].u_base,
+				 sizeof(unsigned long)))
 			return -EFAULT;
 		break;
 	}
