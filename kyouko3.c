@@ -126,28 +126,35 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	if ((iflags & 0x02) == 0) {
 		return IRQ_NONE;
 	}
-	// Check if all buffers full when interrupt was called.
+
+	// Protect data which might be accessed from process context
+	spin_lock(&k3.lock);
+
+	// we are ready to drain the next buffer
 	inc_dmabuf_idx(&k3.drain);
-	// Check if buffers are now empty.
+
 	empty = k3.fill == k3.drain;
-	// If buffers left in queue, start next one
+
 	if (!empty) {
+		// Queue is not empty. Dispatch the next buffer
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-	}
-	// Buffer is empty and dma is off, we are shutting down so wake user.
-	else {
+	} else {
+		// Queue is empty. Wake up unbind_dma
 		if (!k3.dma_on) {
 			wake_up_interruptible(&unbind_snooze);
 		}
 	}
+
 	// Wake up sleeping user if buffer was full.
 	if (k3.full) {
 		k3.full = 0;
 		wake_up_interruptible(&dma_snooze);
 	}
-	// if not-spurious, then
+
+	spin_unlock(&k3.lock);
+
 	return IRQ_HANDLED;
 }
 
@@ -158,29 +165,30 @@ int initiate_transfer(unsigned long size)
 {
 	int ret;
 	unsigned long flags;
-	// grab dma_snooze lock so that we can use
-	// wait_event_interruptible_locked.
+
 	spin_lock_irqsave(&k3.lock, flags);
 	dma[k3.fill].size = size;
-	if (k3.fill == k3.drain) {
-		// SET LOCKED RETURN VALUE
-		inc_dmabuf_idx(&k3.fill);
-		ret = k3.fill;
 
-		// push next item to card.
+	if (k3.fill == k3.drain) {
+		// Queue is empty, dispatch buffer
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
+		inc_dmabuf_idx(&k3.fill);
+		ret = k3.fill;
+
 		spin_unlock_irqrestore(&k3.lock, flags);
 		return ret;
 	}
-	// SET LOCKED RETURN VALUE
+
 	inc_dmabuf_idx(&k3.fill);
 	ret = k3.fill;
+	// Next buf is still being drained. Queue is full.
 	k3.full = k3.fill == k3.drain;
 	spin_unlock_irqrestore(&k3.lock, flags);
 	if (k3.full) {
+		// Wait till a buffer is drained
 		wait_event_interruptible(dma_snooze, !k3.full);
 	}
 	return ret;
@@ -209,7 +217,7 @@ int dma_init(struct file *fp)
 		pr_warn("pci_enable_msi failed\n");
 		return ret;
 	}
-	// acquire dma buffers
+
 	for (int i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
 		dma[i].k_base =
@@ -218,6 +226,8 @@ int dma_init(struct file *fp)
 		    vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
 			    MAP_SHARED, VM_PGOFF_DMA);
 	}
+	// We don't need locking here because we have not enabled interrupts on
+	// the device yet.
 	k3.fill = 0;
 	k3.drain = 0;
 	spin_lock_init(&k3.lock);
