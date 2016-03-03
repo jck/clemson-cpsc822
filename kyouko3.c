@@ -129,7 +129,6 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	}
 
 	// Protect data which might be accessed from process context
-	spin_lock(&k3.lock);
 
 	// we are ready to drain the next buffer
 	dmaq_inc_idx(&k3.drain);
@@ -147,7 +146,6 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 		// Queue is empty. Wake up unbind_dma
 		if (!k3.dma_on) {
 			pr_info("irq: wuius %d %d \n", k3.fill, k3.drain);
-			spin_unlock(&k3.lock);
 			pr_info("irq: wake unbind_snooze\n");
 			wake_up_interruptible(&unbind_snooze);
 			return IRQ_HANDLED;
@@ -160,7 +158,6 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 		wake_up_interruptible(&dma_snooze);
 	}
 
-	spin_unlock(&k3.lock);
 
 	return IRQ_HANDLED;
 }
@@ -249,7 +246,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	int i;
 	long ret = 0;
 	int count;
-	unsigned long flags;
 
 	switch (cmd) {
 	case VMODE:
@@ -319,19 +315,14 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	case UNBIND_DMA:
 		pr_info("unbind dma\n");
 		// set flag to wake up user when buffer is empty
-		spin_lock_irqsave(&k3.lock, flags);
 		pr_info("dmaon = 0 %d %d \n", k3.fill, k3.drain);
 		k3.dma_on = 0;
 		// snooze user and empty queue
 		if (k3.fill != k3.drain) {
-			spin_unlock_irqrestore(&k3.lock, flags);
 			pr_info("ubdma wait\n");
 			wait_event_interruptible(unbind_snooze,
 						 k3.fill == k3.drain);
-		} else {
-			spin_unlock_irqrestore(&k3.lock, flags);
-		}
-		pr_info("unbind dmaaa\n");
+		} 		pr_info("unbind dmaaa\n");
 		// Unmap buffers.
 		for (i = 0; i < DMA_BUFNUM; i++) {
 			vm_munmap(dma[i].u_base, DMA_BUFSIZE);
