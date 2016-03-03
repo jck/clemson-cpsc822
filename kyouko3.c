@@ -354,9 +354,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-/*
- * Open function for kernel module.
- */
 int kyouko3_open(struct inode *inode, struct file *fp)
 {
 	// ioremap_wc is faster than ioremap on some hardware
@@ -366,9 +363,6 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 	return 0;
 }
 
-/*
- * Release function for kernel module.
- */
 int kyouko3_release(struct inode *inode, struct file *fp)
 {
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
@@ -403,21 +397,14 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 	return ret;
 }
 
-/*
- * File operations structure
- */
 struct file_operations kyouko3_fops = {.open = kyouko3_open,
 				       .release = kyouko3_release,
 				       .mmap = kyouko3_mmap,
 				       .unlocked_ioctl = kyouko3_ioctl,
 				       .owner = THIS_MODULE};
 
-// Kyouko3 device.
 struct cdev kyouko3_dev;
 
-/*
- * Probe function.
- */
 int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 {
 	k3.pdev = pdev;
@@ -431,31 +418,19 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	return 0;
 }
 
-/*
- * Remove function.
- */
 void kyouko3_remove(struct pci_dev *pdev)
 {
 	pci_disable_device(pdev);
 }
 
-/*
- * Device ids.
- */
 struct pci_device_id kyouko3_dev_ids[] = {
     {PCI_DEVICE(PCI_VENDOR_ID_CCORSI, PCI_DEVICE_ID_CCORSI_KYOUKO3)}, {0}};
 
-/*
- * Driver struct
- */
 struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 				     .id_table = kyouko3_dev_ids,
 				     .probe = kyouko3_probe,
 				     .remove = kyouko3_remove};
 
-/*
- * Basic init function.
- */
 int kyouko3_init(void)
 {
 	int ret;
@@ -468,9 +443,6 @@ int kyouko3_init(void)
 	return ret;
 }
 
-/*
- * Basic exit function.
- */
 void kyouko3_exit(void)
 {
 	cdev_del(&kyouko3_dev);
