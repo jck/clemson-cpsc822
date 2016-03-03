@@ -61,6 +61,7 @@ struct kyouko3_vars {
 	u32 fill;
 	u32 drain;
 	bool full;
+	spinlock_t lock;
 } k3;
 
 static inline void K_WRITE_REG(u32 reg, u32 value)
@@ -153,7 +154,7 @@ int initiate_transfer(unsigned long size)
 	unsigned long flags;
 	// grab dma_snooze lock so that we can use
 	// wait_event_interruptible_locked.
-	spin_lock_irqsave(&dma_snooze.lock, flags);
+	spin_lock_irqsave(&k3.lock, flags);
 	dma[k3.fill].current_size = size;
 	if (k3.fill == k3.drain) {
 		// SET LOCKED RETURN VALUE
@@ -165,14 +166,14 @@ int initiate_transfer(unsigned long size)
 		fifo_write(BUFA_CONF, size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
-		spin_unlock_irqrestore(&dma_snooze.lock, flags);
+		spin_unlock_irqrestore(&k3.lock, flags);
 		return ret;
 	}
 	// SET LOCKED RETURN VALUE
 	k3.fill = (k3.fill + 1) % DMA_BUFNUM;
 	ret = k3.fill;
 	k3.full = k3.fill == k3.drain;
-	spin_unlock_irqrestore(&dma_snooze.lock, flags);
+	spin_unlock_irqrestore(&k3.lock, flags);
 	if (k3.full) {
 		wait_event_interruptible(dma_snooze, !k3.full);
 	}
