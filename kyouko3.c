@@ -367,7 +367,8 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	k3.fb.p_base = pci_resource_start(pdev, 2);
 	k3.fb.len = pci_resource_len(pdev, 2);
 
-	return 0;
+	pci_set_master(pdev);
+	return pci_enable_device(pdev);
 }
 
 void kyouko3_remove(struct pci_dev *pdev)
@@ -385,14 +386,10 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 
 int kyouko3_init(void)
 {
-	int ret;
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;
-	ret = pci_register_driver(&kyouko3_pci_drv);
-	ret = pci_enable_device(k3.pdev);
-	pci_set_master(k3.pdev);
-	return ret;
+	return pci_register_driver(&kyouko3_pci_drv);
 }
 
 void kyouko3_exit(void)
