@@ -379,10 +379,6 @@ int kyouko3_release(struct inode *inode, struct file *fp)
 	return 0;
 }
 
-/*
- * Memory mapping function. Maps to control region, framebuffer, or DMA
- * buffers.
- */
 int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 {
 	int ret = 0;
@@ -394,15 +390,12 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 	off = vma->vm_pgoff << PAGE_SHIFT;
 	vma->vm_pgoff = 0;
 	switch (off) {
-	// Control region
 	case VM_PGOFF_CONTROL:
 		ret = vm_iomap_memory(vma, k3.control.p_base, k3.control.len);
 		break;
-	// Framebuffer
 	case VM_PGOFF_FB:
 		ret = vm_iomap_memory(vma, k3.fb.p_base, k3.fb.len);
 		break;
-	// DMA
 	case VM_PGOFF_DMA:
 		ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
 		break;
