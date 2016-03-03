@@ -186,21 +186,31 @@ int initiate_transfer(unsigned long size)
 	return ret;
 }
 
+/* Set up pci interrupts and dma buffers */
 int dma_init(struct file *fp)
 {
-	int i, ret;
-	k3.dma_on = 1;
-	// bail if we can't init
-	if ((ret = pci_enable_msi(k3.pdev))) {
+	// If dma was already on, skip the initialization.
+	// re-running the buffer allocation loop will cause us to lose the old
+	// dma handles and they would never be freed.
+	if (k3.dma_on) {
+		return 0;
+	}
+
+	int ret = 0;
+	ret = pci_enable_msi(k3.pdev);
+	if (ret) {
+		pr_warn("pci_enable_msi failed\n");
 		return ret;
 	}
-	if ((ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr,
-			       IRQF_SHARED, "kyouku3 dma isr", &k3))) {
+
+	ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED,
+			  "kyouku3 dma isr", &k3);
+	if (ret) {
+		pr_warn("pci_enable_msi failed\n");
 		return ret;
 	}
-	K_WRITE_REG(CONF_INTERRUPT, 0x02);
 	// acquire dma buffers
-	for (i = 0; i < DMA_BUFNUM; i++) {
+	for (int i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
 		dma[i].k_base =
 		    pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
@@ -208,10 +218,13 @@ int dma_init(struct file *fp)
 		    vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
 			    MAP_SHARED, VM_PGOFF_DMA);
 	}
-	// init dma queue counters.
 	k3.fill = 0;
 	k3.drain = 0;
-	return 0;
+	spin_lock_init(&k3.lock);
+	k3.dma_on = true;
+	K_WRITE_REG(CONF_INTERRUPT, 0x02);
+
+	return ret;
 }
 
 long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
@@ -277,11 +290,14 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		break;
 	case BIND_DMA:
 		ret = dma_init(fp);
-		if ((ret = copy_to_user(argp, &dma[0].u_base,
-					sizeof(unsigned long)))) {
+		if (ret) {
+			pr_warn("BIND_DMA failed\n");
 			return ret;
 		}
-		break;
+		if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
+			return -EFAULT;
+		}
+		return 0;
 	case UNBIND_DMA:
 		// set flag to wake up user when buffer is empty
 		k3.dma_on = 0;
