@@ -369,7 +369,7 @@ void kyouko3_remove(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 }
 
-struct pci_device_id kyouko3_dev_ids[] = {
+static const struct pci_device_id kyouko3_dev_ids[] = {
     {PCI_DEVICE(PCI_VENDOR_ID_CCORSI, PCI_DEVICE_ID_CCORSI_KYOUKO3)}, {0}};
 
 struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
