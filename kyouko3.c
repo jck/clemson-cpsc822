@@ -31,59 +31,35 @@ DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 // completely empty before exiting.
 DECLARE_WAIT_QUEUE_HEAD(unbind_snooze);
 
-// Struct containing info on a physical region of memory.
 struct phys_region {
-	// physical address
 	phys_addr_t p_base;
-	// length of this region
 	unsigned long len;
-	// kernel addr to this region.
 	unsigned int *k_base;
 };
 
-// Structure containing fifo information.
 struct _fifo {
-	// phyiscal addr of fifo.
 	dma_addr_t p_base;
-	// kernel base of fifo
 	struct fifo_entry *k_base;
-	// software head of fifo
 	u32 head;
-	// tail cache of fifo
 	u32 tail_cache;
 };
 
-// Structure containing DMA buffers.
 struct k3_dma_buf {
-	// kernel base
 	unsigned int *k_base;
-	// user base
 	unsigned long u_base;
-	// address
 	dma_addr_t handle;
-	// number of bytes filled in this buffer.
 	int current_size;
 } dma[DMA_BUFNUM];
 
-// Driver variables.
 struct kyouko3_vars {
-	// control region
 	struct phys_region control;
-	// framebuffer
 	struct phys_region fb;
-	// True if VMODE is on.
 	bool graphics_on;
-	// True if DMA is enabled.
 	bool dma_on;
-	// Fifo
 	struct _fifo fifo;
-	// Device
 	struct pci_dev *pdev;
-	// Next available address to fill in DMA buffers.
 	u32 fill;
-	// next dma buffer to drain.
 	u32 drain;
-	// If DMA is full
 	bool full;
 } k3;
 
@@ -98,10 +74,6 @@ static inline u32 K_READ_REG(u32 reg)
 	return *(k3.control.k_base + (reg >> 2));
 }
 
-/*
- * Init function for the fifo. Sets up fifo head and tail values, and
- * allocates memory for the fifo.
- */
 void fifo_init(void)
 {
 	k3.fifo.k_base =
@@ -112,10 +84,6 @@ void fifo_init(void)
 	k3.fifo.tail_cache = 0;
 }
 
-/*
- * Flush function for synchronizing the software-copy of the FIFO with the
- * on-card fifo.
- */
 void fifo_flush(void)
 {
 	K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
@@ -125,12 +93,6 @@ void fifo_flush(void)
 	}
 }
 
-/*
- * Function for writing commands to fifo.
- * Parameters:
- * cmd - FIFO command to execute.
- * val - Value used for the command.
- */
 void fifo_write(u32 cmd, u32 val)
 {
 	k3.fifo.k_base[k3.fifo.head].command = cmd;
@@ -217,10 +179,6 @@ int initiate_transfer(unsigned long size)
 	return ret;
 }
 
-/*
- * IOCTL function containing logic for turning on/off graphics mode, on/off
- * dma, writing to the fifo, and flushing the fifo queue.
- */
 long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
 	struct fifo_entry entry;
@@ -231,7 +189,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case VMODE:
-		// init graphics mode
 		if (arg == GRAPHICS_ON) {
 
 			K_WRITE_REG(FRAME_COLUMNS, 1024);
@@ -275,7 +232,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			k3.graphics_on = 0;
 		}
 		break;
-	// Add item to fifo queue.
 	case FIFO_QUEUE:
 		if ((ret = copy_from_user(&entry, argp,
 					  sizeof(struct fifo_entry)))) {
@@ -283,11 +239,9 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		fifo_write(entry.command, entry.value);
 		break;
-	// Sync software fifo with hardware fifo.
 	case FIFO_FLUSH:
 		fifo_flush();
 		break;
-	// Bind DMA buffers to begin dma actions.
 	case BIND_DMA:
 		k3.dma_on = 1;
 		// bail if we can't init
@@ -317,7 +271,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			return ret;
 		}
 		break;
-	// Finish DMA and de-queue buffers.
 	case UNBIND_DMA:
 		// set flag to wake up user when buffer is empty
 		k3.dma_on = 0;
@@ -336,7 +289,6 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		free_irq(k3.pdev->irq, &k3);
 		pci_disable_msi(k3.pdev);
 		break;
-	// Start a dma buffer.
 	case START_DMA:
 		// using copies to preserve return as an error value.
 		if ((ret =
