@@ -222,6 +222,7 @@ void test_dma_bind_unbind() {
 }
 
 void test_dma_bind_close() {
+  // Works
   PFN();
   user_init();
   gfx_on();
