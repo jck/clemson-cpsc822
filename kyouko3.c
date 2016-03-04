@@ -231,6 +231,10 @@ int dma_init(struct file *fp)
 	int ret = 0;
 	unsigned long addr;
 
+	if (k3.dma_bufs_dirty) {
+		dma_free_bufs();
+	}
+
 	// If dma was already on, skip the initialization.
 	// re-running the buffer allocation loop will cause us to lose the old
 	// dma handles and they would never be freed.
@@ -251,9 +255,6 @@ int dma_init(struct file *fp)
 		return ret;
 	}
 
-	if (k3.dma_bufs_dirty) {
-		dma_free_bufs();
-	}
 
 	for (i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
@@ -331,9 +332,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		// disable graphics mode.
 		else if (arg == GRAPHICS_OFF) {
 			pr_debug("turning off gfx\n");
-			if (k3.dma_on) {
-				// kyouko3_ioctl(fp, UNBIND_DMA, 0);
-			} else {
+			if (!k3.dma_on) {
 				fifo_flush();
 			}
 			pr_debug("done\n");
@@ -408,14 +407,14 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 
 int kyouko3_release(struct inode *inode, struct file *fp)
 {
-	pr_alert("release!!\n");
-	pr_debug("rel\n");
+	pr_debug("release\n");
 	// User bailed. Since we can't use vm_munmap inside release because of
 	// deadlocks, we stop the dma but don't fully clean up.
 	if (k3.dma_on) {
 		dma_stop();
 		k3.dma_on = false;
 		k3.dma_bufs_dirty = true;
+		k3.dma_on = 0;
 	}
 
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
@@ -489,7 +488,6 @@ int kyouko3_init(void)
 {
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
-	k3.dma_on = 0;
 	return pci_register_driver(&kyouko3_pci_drv);
 }
 
