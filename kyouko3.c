@@ -18,6 +18,7 @@
 #include <linux/cdev.h>
 #include <linux/pci.h>
 #include <linux/spinlock.h>
+#include <linux/circ_buf.h>
 
 #include "kyouko3.h"
 
@@ -77,6 +78,14 @@ struct kyouko3_vars {
 static inline void dmaq_inc_idx(u32 *idx)
 {
 	*idx = (*idx + 1) & (DMA_BUFNUM - 1);
+}
+
+// Returns the number of elements pressent in the dma circ buffer.
+// (k3.fill - k3.tail) & (DMA_BUFNUM -1)
+// CIRC_CNT is in include/linux/circ_buf.h
+static inline int dmaq_cnt(void)
+{
+	return CIRC_CNT(k3.fill, k3.drain, DMA_BUFNUM);
 }
 
 static inline void K_WRITE_REG(u32 reg, u32 value)
@@ -177,32 +186,43 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
  */
 void initiate_transfer(unsigned long size)
 {
+	int cnt;
 	unsigned long flags;
 	pr_debug("initiate_transfer\n");
 
 	spin_lock_irqsave(&k3.lock, flags);
 	dma[k3.fill].size = size;
 
-	if (k3.fill == k3.drain) {
-		// Queue is empty, dispatch buffer
+	// This is the number of items currently in the DMA queue.
+	// It will lie between 0 and DMA_BUFNUM-1 (Almost full).
+	// The Queue could be in three possible states: Empty, partially full,
+	// and almost full.
+	cnt = dmaq_cnt();
+
+	// Increment the fill pointer for the next producer
+	dmaq_inc_idx(&k3.fill);
+
+	if (cnt == 0) {
+		// Queue was empty, dispatch buffer.
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 
-		dmaq_inc_idx(&k3.fill);
 		spin_unlock_irqrestore(&k3.lock, flags);
+		return;
+	} else if (cnt == DMA_BUFSIZE -1) {
+		// The entry filled up the Queue.
+		// We wait here till a buffer is drained.
+		k3.full = true;
+		spin_unlock_irqrestore(&k3.lock, flags);
+		wait_event_interruptible(dma_snooze, !k3.full);
 		return;
 	}
 
-	dmaq_inc_idx(&k3.fill);
-	// Next buf is still being drained. Queue is full.
-	k3.full = k3.fill == k3.drain;
+	// If the queue was only partially filled, there is nothing else to do.
 	spin_unlock_irqrestore(&k3.lock, flags);
-	if (k3.full) {
-		spin_unlock_irqrestore(&k3.lock, flags);
-		// Wait till a buffer is drained
-		wait_event_interruptible(dma_snooze, !k3.full);
-	}
+	return;
+
 }
 
 /* Set up pci interrupts and dma buffers */
