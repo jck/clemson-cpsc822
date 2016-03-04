@@ -64,7 +64,7 @@ struct kyouko3_vars {
 	spinlock_t lock;
 	bool dma_snoozing;
 	bool unbind_snoozing;
-
+	bool dma_bufs_dirty;
 } k3;
 
 /* Efficient way to increment index of circ buffer whose size is a power of two.
@@ -214,6 +214,16 @@ void initiate_transfer(unsigned long size)
 	return;
 }
 
+void dma_free_bufs(void)
+{
+	int i = 0;
+	for (i = 0; i < DMA_BUFNUM; i++) {
+		vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+		pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
+				    dma[i].handle);
+	}
+}
+
 /* Set up pci interrupts and dma buffers */
 int dma_init(struct file *fp)
 {
@@ -239,6 +249,10 @@ int dma_init(struct file *fp)
 	if (ret) {
 		pr_warn("pci_enable_msi failed\n");
 		return ret;
+	}
+
+	if (k3.dma_bufs_dirty) {
+		dma_free_bufs();
 	}
 
 	for (i = 0; i < DMA_BUFNUM; i++) {
@@ -272,15 +286,6 @@ void dma_stop(void)
 	pci_disable_msi(k3.pdev);
 }
 
-void dma_free_bufs(void)
-{
-	int i = 0;
-	for (i = 0; i < DMA_BUFNUM; i++) {
-		vm_munmap(dma[i].u_base, DMA_BUFSIZE);
-		pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
-				    dma[i].handle);
-	}
-}
 
 long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
@@ -410,6 +415,7 @@ int kyouko3_release(struct inode *inode, struct file *fp)
 	if (k3.dma_on) {
 		dma_stop();
 		k3.dma_on = false;
+		k3.dma_bufs_dirty = true;
 	}
 
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
