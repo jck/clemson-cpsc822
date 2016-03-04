@@ -133,14 +133,12 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	int cnt;
 	u32 iflags = K_READ_REG(INFO_STATUS);
 
-
 	K_WRITE_REG(INFO_STATUS, 0xf);
 
 	// spurious interrupt
 	if ((iflags & 0x02) == 0) {
 		return IRQ_NONE;
 	}
-
 
 	// we just drained a buffer
 	dmaq_inc_idx(&k3.drain);
@@ -173,7 +171,6 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	return IRQ_HANDLED;
 }
 
-
 /*
  * Initiate a DMA request if possible.
  */
@@ -203,7 +200,7 @@ void initiate_transfer(unsigned long size)
 
 		spin_unlock_irqrestore(&k3.lock, flags);
 		return;
-	} else if (cnt == DMA_BUFNUM -1) {
+	} else if (cnt == DMA_BUFNUM - 1) {
 		// This entry filled up the Queue.
 		// We wait here till a buffer is drained.
 		k3.dma_snoozing = true;
@@ -215,7 +212,6 @@ void initiate_transfer(unsigned long size)
 	// If the queue was only partially filled, there is nothing else to do.
 	spin_unlock_irqrestore(&k3.lock, flags);
 	return;
-
 }
 
 /* Set up pci interrupts and dma buffers */
@@ -251,8 +247,8 @@ int dma_init(struct file *fp)
 		    pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
 
 		addr = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
-			    MAP_SHARED, VM_PGOFF_DMA);
-		if (IS_ERR_VALUE(addr)){
+			       MAP_SHARED, VM_PGOFF_DMA);
+		if (IS_ERR_VALUE(addr)) {
 			pr_warn("vm_mmap failed\n");
 			return addr;
 		}
@@ -269,13 +265,15 @@ int dma_init(struct file *fp)
 	return ret;
 }
 
-void dma_stop(void) {
+void dma_stop(void)
+{
 	K_WRITE_REG(CONF_INTERRUPT, 0);
 	free_irq(k3.pdev->irq, &k3);
 	pci_disable_msi(k3.pdev);
 }
 
-void dma_free_bufs(void) {
+void dma_free_bufs(void)
+{
 	int i = 0;
 	for (i = 0; i < DMA_BUFNUM; i++) {
 		vm_munmap(dma[i].u_base, DMA_BUFSIZE);
@@ -366,12 +364,12 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			pr_debug("unbind_snoozing\n");
 			k3.unbind_snoozing = true;
 			spin_unlock_irqrestore(&k3.lock, flags);
-			wait_event_interruptible(unbind_snooze, !k3.unbind_snoozing);
+			wait_event_interruptible(unbind_snooze,
+						 !k3.unbind_snoozing);
 			pr_debug("unbind_snoozing done\n");
 
 		} else {
 			spin_unlock_irqrestore(&k3.lock, flags);
-
 		}
 		pr_debug("real unbind dma\n");
 
