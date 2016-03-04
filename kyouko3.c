@@ -21,7 +21,7 @@
 
 #include "kyouko3.h"
 
-MODULE_LICENSE("Proprietary");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sriram Madhivanan, Tyler Allen, Keerthan Jaic,"
 	      " Praarthana Ramakrishnan");
 
@@ -95,7 +95,7 @@ void fifo_init(void)
 
 void fifo_flush(void)
 {
-	pr_info("fifo flush\n");
+	pr_alert("fifo flush\n");
 	K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	while (k3.fifo.tail_cache != k3.fifo.head) {
 		k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
@@ -136,21 +136,22 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	empty = k3.fill == k3.drain;
 
 	if (!empty) {
-		pr_info("irq: not empty\n");
+		pr_alert("irq: not empty\n");
 		// Queue is not empty. Dispatch the next buffer
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	} else {
-		pr_info("irq: empty\n");
+		pr_alert("irq: empty\n");
 		// Queue is empty. Wake up unbind_dma
 		if (!k3.dma_on) {
-			pr_info("irq: wuius %d %d \n", k3.fill, k3.drain);
-			pr_info("irq: wake unbind_snooze\n");
+			pr_alert("irq: wuius %d %d \n", k3.fill, k3.drain);
+			pr_alert("irq: wake unbind_snooze\n");
 			wake_up_interruptible(&unbind_snooze);
-			return IRQ_HANDLED;
+			//return IRQ_HANDLED;
 		}
 	}
+	wake_up_interruptible(&unbind_snooze);
 
 	// Wake up sleeping user if buffer was full.
 	if (k3.full) {
@@ -209,14 +210,14 @@ int dma_init(struct file *fp)
 
 	ret = pci_enable_msi(k3.pdev);
 	if (ret) {
-		pr_warn("pci_enable_msi failed\n");
+		pr_alert("pci_enable_msi failed\n");
 		return ret;
 	}
 
 	ret = request_irq(k3.pdev->irq, (irq_handler_t)dma_isr, IRQF_SHARED,
 			  "kyouku3 dma isr", &k3);
 	if (ret) {
-		pr_warn("pci_enable_msi failed\n");
+		pr_alert("pci_enable_msi failed\n");
 		return ret;
 	}
 
@@ -282,16 +283,17 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		// disable graphics mode.
 		else if (arg == GRAPHICS_OFF) {
-			pr_info("gfx off\n");
+			pr_alert("gfx off\n");
+			fifo_flush();
 			if (k3.dma_on) {
 				kyouko3_ioctl(fp, UNBIND_DMA, 0);
-			} else {
-				fifo_flush();
-			}
-			pr_info("gfx offf\n");
+			}			pr_alert("gfx offf\n");
 			K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
+			pr_alert("gfx offfff\n");
 			K_WRITE_REG(CONF_MODESET, 0);
 			k3.graphics_on = 0;
+			pr_alert("gfx offfffff\n");
+
 		}
 		break;
 	case FIFO_QUEUE:
@@ -305,7 +307,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	case BIND_DMA:
 		ret = dma_init(fp);
 		if (ret) {
-			pr_warn("BIND_DMA failed\n");
+			pr_alert("BIND_DMA failed\n");
 			return ret;
 		}
 		if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
@@ -313,25 +315,30 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		return 0;
 	case UNBIND_DMA:
-		pr_info("unbind dma\n");
+		pr_alert("unbind dma\n");
 		// set flag to wake up user when buffer is empty
-		pr_info("dmaon = 0 %d %d \n", k3.fill, k3.drain);
+		
+		pr_alert("dmaon = 0 %d %d \n", k3.fill, k3.drain);
 		k3.dma_on = 0;
 		// snooze user and empty queue
+		
 		if (k3.fill != k3.drain) {
-			pr_info("ubdma wait\n");
+			pr_alert("ubdma wait\n");
 			wait_event_interruptible(unbind_snooze,
 						 k3.fill == k3.drain);
-		} 		pr_info("unbind dmaaa\n");
+		} 		pr_alert("unbind dmaaa\n");
 		// Unmap buffers.
 		for (i = 0; i < DMA_BUFNUM; i++) {
-			vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+			//vm_munmap(dma[i].u_base, DMA_BUFSIZE);
 			pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
 					    dma[i].handle);
 		}
+		
+		
 		K_WRITE_REG(CONF_INTERRUPT, 0);
 		free_irq(k3.pdev->irq, &k3);
 		pci_disable_msi(k3.pdev);
+		
 		break;
 	case START_DMA:
 		if (copy_from_user(&count, argp, sizeof(unsigned int)))
@@ -357,11 +364,15 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 
 int kyouko3_release(struct inode *inode, struct file *fp)
 {
+        pr_alert("kyouko3_release");
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
-	fifo_flush();
+        pr_alert("graphics_off done end");
 	iounmap(k3.control.k_base);
+        pr_alert("kyouko3_iounmap1 end");
 	iounmap(k3.fb.k_base);
+        pr_alert("kyouko3_iounmap2 done");
 	pci_free_consistent(k3.pdev, 8192, k3.fifo.k_base, k3.fifo.p_base);
+        pr_alert("kyouko3_release end");
 	return 0;
 }
 
@@ -413,6 +424,7 @@ int kyouko3_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 
 void kyouko3_remove(struct pci_dev *pdev)
 {
+        pr_alert("kyouko3_remove");
 	pci_disable_device(pdev);
 }
 
@@ -426,6 +438,7 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 
 int kyouko3_init(void)
 {
+	pr_alert("log test");
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;
@@ -434,6 +447,7 @@ int kyouko3_init(void)
 
 void kyouko3_exit(void)
 {
+        pr_alert("kyouko3_exit");
 	cdev_del(&kyouko3_dev);
 	pci_unregister_driver(&kyouko3_pci_drv);
 }

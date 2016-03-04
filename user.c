@@ -221,15 +221,16 @@ main ()
     //BIND_DMA
     ioctl (kyouko3.fd, BIND_DMA, &arg);
     srand(time(NULL));
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1; i++)
     {
-    	arg = rand_dma_triangle (arg);
+    //	arg = rand_dma_triangle (arg);
     }
-    fifo_flush ();
-    sleep(6);
+//    fifo_flush ();
+//    close (kyouko3.fd);
+  //  sleep(6);
     // UNBIND_DMA
-    unbind_dma ();
-    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
+//    unbind_dma ();
+//    ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
 
     // cleanup
     close (kyouko3.fd);
