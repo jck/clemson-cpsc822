@@ -32,43 +32,62 @@ struct dma_req {
 struct u_kyouko_device {
   unsigned int *u_control_base;
   unsigned int *u_fb_base;
+  unsigned long fb_len;
   int fd;
-} kyouko3;
+} k3;
 
 /*
  * This is a series of wrapper functions.
  */
+
 unsigned int U_READ_REG(unsigned int reg) {
-  return (*(kyouko3.u_control_base + (reg >> 2)));
+  return (*(k3.u_control_base + (reg >> 2)));
 }
 
 void U_WRITE_FB(unsigned int reg, unsigned int value) {
-  *(kyouko3.u_fb_base + reg) = value;
+  *(k3.u_fb_base + reg) = value;
 }
+
+void gfx_on(void) { ioctl(k3.fd, VMODE, GRAPHICS_ON); }
+
+void gfx_off(void) { ioctl(k3.fd, VMODE, GRAPHICS_OFF); }
 
 void fifo_queue(unsigned int cmd, unsigned int val) {
   struct fifo_entry entry = {cmd, val};
-  ioctl(kyouko3.fd, FIFO_QUEUE, &entry);
+  ioctl(k3.fd, FIFO_QUEUE, &entry);
 }
 
 static inline void fifo_flush() {
   printf("flushing fifo\n");
-  ioctl(kyouko3.fd, FIFO_FLUSH, 0);
+  ioctl(k3.fd, FIFO_FLUSH, 0);
 }
 
 void bind_dma(struct dma_req *req) {
   printf("bind dma\n");
-  ioctl(kyouko3.fd, BIND_DMA, &req->u_base);
+  ioctl(k3.fd, BIND_DMA, (unsigned long)&req->u_base);
 }
 
-void start_dma(struct dma_req *req) {
-  printf("start dma\n");
-  ioctl(kyouko3.fd, START_DMA, &req->u_base);
-}
+void start_dma(struct dma_req *req) { ioctl(k3.fd, START_DMA, &req->count); }
 
 void unbind_dma(void) {
   printf("unbind dma\n");
-  ioctl(kyouko3.fd, UNBIND_DMA, 0);
+  ioctl(k3.fd, UNBIND_DMA, 0);
+}
+
+void user_init() {
+  k3.fd = open("/dev/kyouko3", O_RDWR);
+  k3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ | PROT_WRITE,
+                           MAP_SHARED, k3.fd, VM_PGOFF_CONTROL);
+  k3.fb_len = U_READ_REG(Device_RAM) * 1024 * 1024;
+  k3.u_fb_base = mmap(0, k3.fb_len, PROT_READ | PROT_WRITE, MAP_SHARED, k3.fd,
+                      VM_PGOFF_FB);
+  srand(time(NULL));
+}
+
+void user_exit() {
+  munmap(k3.u_control_base, KYOUKO_CONTROL_SIZE);
+  munmap(k3.u_fb_base, k3.fb_len);
+  close(k3.fd);
 }
 
 unsigned int rand_f_range(float min, float max) {
@@ -79,19 +98,17 @@ unsigned int rand_f_range(float min, float max) {
 unsigned int rand_col(void) { return rand_f_range(0, 1); }
 
 unsigned int rand_vtx(void) { return rand_f_range(-1, 1); }
-/*
- * Draws red line,
- */
+
 void draw_line_fb() {
   for (int i = 200 * 1024; i < 201 * 1024; i++) {
     U_WRITE_FB(i, 0xff0000);
   }
 }
 
-/*
- * DRaws a triangle using fifo.
- */
 void fifo_triangle() {
+  sleep(2);
+  gfx_on();
+
   float triangle[3][2][4] = {
       {{-0.5, -0.5, 0, 1.0}, {1.0, 0, 0, 0}},
       {{0.5, 0, 0, 1.0}, {0, 1.0, 0, 0}},
@@ -113,10 +130,14 @@ void fifo_triangle() {
   fifo_queue(COMMAND_PRIMITIVE, 0);
   fifo_queue(RASTER_FLUSH, 0);
   fifo_flush();
+
+  sleep(2);
+  gfx_off();
 }
 
-long gen_dma_triangles(unsigned long buf_addr, int num) {
-  unsigned int *buf = (unsigned int *)buf_addr;
+// Writes random dma formatted triangles into a buffer
+void gen_dma_triangles(struct dma_req *req, int num) {
+  unsigned int *buf = req->u_base;
 
   struct kyouko3_dma_hdr hdr = {
       .stride = 5, .rgb = 1, .b12 = 1, .opcode = 0x14, .count = num * 3};
@@ -132,61 +153,36 @@ long gen_dma_triangles(unsigned long buf_addr, int num) {
       }
     }
   }
-  // long c = (buf - (unsigned int*)buf_addr) * sizeof(unsigned int);
-  long c = (1 + num * 18) * sizeof(unsigned int);
-  printf("cnt: %d\n", c);
-  return c;
+  req->count = (1 + num * 18) * sizeof(unsigned int);
+}
+
+void dma_triangles() {
+  sleep(2);
+  gfx_on();
+
+  struct dma_req req;
+
+  bind_dma(&req);
+
+  for (int i = 0; i < 1000; i++) {
+    gen_dma_triangles(&req, 2);
+    start_dma(&req);
+    fifo_queue(RASTER_FLUSH, 0);
+  }
+  fifo_flush();
+  unbind_dma();
+
+  sleep(6);
+  gfx_off();
 }
 
 int main() {
-  kyouko3.fd = open("/dev/kyouko3", O_RDWR);
-  kyouko3.u_control_base = mmap(0, KYOUKO_CONTROL_SIZE, PROT_READ | PROT_WRITE,
-                                MAP_SHARED, kyouko3.fd, VM_PGOFF_CONTROL);
-  kyouko3.u_fb_base =
-      mmap(0, U_READ_REG(Device_RAM) * 1024 * 1024, PROT_READ | PROT_WRITE,
-           MAP_SHARED, kyouko3.fd, VM_PGOFF_FB);
+  user_init();
 
-  // // draw line
-  // printf ("Drawing line by writing to FB\n");
-  // sleep(2);
-  // ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
-  // draw_line_fb();
-  // sleep(2);
-  // ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
-  // // draw fifo triangle
-  // sleep(2);
+  // Demos
+  fifo_triangle();
+  dma_triangles();
 
-  // printf ("Drawing triangle by queing FIFO cmds\n");
-  // sleep(2);
-  // ioctl (kyouko3.fd, VMODE, GRAPHICS_ON);
-  // fifo_triangle();
-  // sleep(2);
-  // ioctl (kyouko3.fd, VMODE, GRAPHICS_OFF);
-
-  printf("Drawing random triangles with dma.\n");
-  // sleep(2);
-  // show off DMA
-  ioctl(kyouko3.fd, VMODE, GRAPHICS_ON);
-  unsigned long arg = 0;
-
-  // BIND_DMA
-  srand(time(NULL));
-  ioctl(kyouko3.fd, BIND_DMA, &arg);
-  printf("addr: %lx", arg);
-  arg = gen_dma_triangles(arg, 2);
-  ioctl(kyouko3.fd, START_DMA, &arg);
-  fifo_queue(RASTER_FLUSH, 0);
-
-  // for (int i = 0; i < 100; i++) {
-  //   arg = rand_dma_triangle(arg);
-  // }
-  fifo_flush();
-  sleep(6);
-  // // UNBIND_DMA
-  unbind_dma();
-  ioctl(kyouko3.fd, VMODE, GRAPHICS_OFF);
-
-  // // cleanup
-  close(kyouko3.fd);
+  user_exit();
   return 0;
 }
