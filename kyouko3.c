@@ -31,6 +31,13 @@ DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 // completely empty before exiting.
 DECLARE_WAIT_QUEUE_HEAD(unbind_snooze);
 
+void mmsinfo (void)
+{
+	struct mm_struct *mm = current->mm;
+	pr_debug("mms: %d\n", mm->mmap_sem.count);
+
+}
+
 struct phys_region {
 	phys_addr_t p_base;
 	unsigned long len;
@@ -203,6 +210,7 @@ int dma_init(struct file *fp)
 {
 	int i;
 	int ret = 0;
+	unsigned long addr;
 
 	// If dma was already on, skip the initialization.
 	// re-running the buffer allocation loop will cause us to lose the old
@@ -224,14 +232,21 @@ int dma_init(struct file *fp)
 		return ret;
 	}
 
+	mmsinfo();
 	for (i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
 		dma[i].k_base =
 		    pci_alloc_consistent(k3.pdev, DMA_BUFSIZE, &dma[i].handle);
-		dma[i].u_base =
-		    vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
+
+		addr = vm_mmap(fp, 0, DMA_BUFSIZE, PROT_READ | PROT_WRITE,
 			    MAP_SHARED, VM_PGOFF_DMA);
+		if (IS_ERR_VALUE(addr)){
+			pr_warn("vm_mmap failed\n");
+			return addr;
+		}
+		dma[i].u_base = addr;
 	}
+	mmsinfo();
 	// We don't need locking here because we have not enabled interrupts on
 	// the device yet.
 	k3.fill = 0;
@@ -329,6 +344,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 						 k3.fill == k3.drain);
 		}
 		pr_debug("starting\n");
+		mmsinfo();
 
 		// Unmap buffers.
 		// for (i = 0; i < DMA_BUFNUM; i++) {
@@ -367,6 +383,7 @@ int kyouko3_release(struct inode *inode, struct file *fp)
 {
 	pr_alert("release!!\n");
 	pr_debug("rel\n");
+	// mmsinfo();
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
 	fifo_flush();
 	iounmap(k3.control.k_base);
@@ -395,6 +412,9 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 	case VM_PGOFF_DMA:
 		ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
 		break;
+	}
+	if (ret) {
+		pr_debug("k3 mmap failed\n");
 	}
 	return ret;
 }
@@ -437,6 +457,7 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 int kyouko3_init(void)
 {
 	pr_debug("hi\n");
+	mmsinfo();
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;
