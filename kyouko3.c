@@ -307,6 +307,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		fifo_flush();
 		break;
 	case BIND_DMA:
+		pr_debug("BIND_DMA\n");
 		ret = dma_init(fp);
 		if (ret) {
 			pr_warn("BIND_DMA failed\n");
@@ -315,6 +316,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		if (copy_to_user(argp, &dma[0].u_base, sizeof(unsigned long))) {
 			return -EFAULT;
 		}
+		pr_debug("done\n");
 		return 0;
 	case UNBIND_DMA:
 		pr_debug("unbinding dma\n");
@@ -329,11 +331,11 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		pr_debug("starting\n");
 
 		// Unmap buffers.
-		for (i = 0; i < DMA_BUFNUM; i++) {
-			vm_munmap(dma[i].u_base, DMA_BUFSIZE);
-			pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
-					    dma[i].handle);
-		}
+		// for (i = 0; i < DMA_BUFNUM; i++) {
+		// 	vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+		// 	pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
+		// 			    dma[i].handle);
+		// }
 		K_WRITE_REG(CONF_INTERRUPT, 0);
 		free_irq(k3.pdev->irq, &k3);
 		pci_disable_msi(k3.pdev);
@@ -363,6 +365,8 @@ int kyouko3_open(struct inode *inode, struct file *fp)
 
 int kyouko3_release(struct inode *inode, struct file *fp)
 {
+	pr_alert("release!!\n");
+	pr_debug("rel\n");
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
 	fifo_flush();
 	iounmap(k3.control.k_base);
