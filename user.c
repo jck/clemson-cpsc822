@@ -181,6 +181,7 @@ void dma_triangles() {
   gfx_off();
 }
 
+
 int demos() {
   // Demos
   user_init();
@@ -227,7 +228,7 @@ void test_dma_bind_close() {
   sleep(10);
   struct dma_req req;
   bind_dma(&req);
-  sleep(100);
+  sleep(10);
   user_exit();
 }
 

@@ -11,6 +11,7 @@ obj-m += kyouko3.o
 
 all: module demos tests
 r: rmod rtest
+rd: rmod rdemo
 
 .PHONY: module
 module:
@@ -31,6 +32,11 @@ rmod: module
 rtest: tests
 	rsync tests 822:
 	ssh 822 ./tests
+
+.PHONY: rdemo
+rdemo: demos
+	rsync demos 822:
+	ssh 822 ./demos
 
 clean:
 	rm -f *.ko *.o *.mod.c
