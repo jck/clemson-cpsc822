@@ -176,12 +176,21 @@ void dma_triangles() {
   gfx_off();
 }
 
+void test_fifo_stress_simple() {
+  for (int i=0; i < 100; i++) {
+    fifo_triangle();
+  }
+}
+
 int main() {
   user_init();
 
   // Demos
-  fifo_triangle();
-  dma_triangles();
+  // fifo_triangle();
+  // dma_triangles();
+
+  //Tests
+  test_fifo_stress_simple();
 
   user_exit();
   return 0;
