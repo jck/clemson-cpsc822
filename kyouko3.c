@@ -381,8 +381,9 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	case START_DMA:
 		if (copy_from_user(&count, argp, sizeof(unsigned int)))
 			return -EFAULT;
-		// initiate transfer is the bulk of this function
-		initiate_transfer(count);
+		if (count != 0) {
+			initiate_transfer(count);
+		}
 		if (copy_to_user(argp, &dma[k3.fill].u_base,
 				 sizeof(unsigned long)))
 			return -EFAULT;
