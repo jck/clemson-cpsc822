@@ -9,25 +9,28 @@ endif
 obj-m += kyouko3.o
 # ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 
-all: module user
-r: rmod ruser
+all: module demos tests
+r: rmod rtest
 
 .PHONY: module
 module:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
-user: user.c
-	gcc -std=gnu99 -o user user.c
+demos: user.c
+	gcc -std=gnu99 -o demos user.c
+
+tests: user.c
+	gcc -std=gnu99 -DTESTING -o tests user.c
 
 .PHONY: rmod
 rmod: module
 	rsync kyouko3.ko 822:
 	ssh 822 'rmmod kyouko3; insmod kyouko3.ko dyndbg=+pmfl'
 
-.PHONY: ruser
-ruser: user
-	rsync user 822:
-	ssh 822 ./user
+.PHONY: rtest
+rtest: tests
+	rsync tests 822:
+	ssh 822 ./tests
 
 clean:
 	rm -f *.ko *.o *.mod.c
