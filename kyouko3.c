@@ -95,12 +95,13 @@ void fifo_init(void)
 
 void fifo_flush(void)
 {
-	pr_info("fifo flush\n");
+	pr_debug("fifo flush starting\n");
 	K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	while (k3.fifo.tail_cache != k3.fifo.head) {
 		k3.fifo.tail_cache = K_READ_REG(FIFO_TAIL);
 		schedule();
 	}
+	pr_debug("fifo flush done\n");
 }
 
 void fifo_write(u32 cmd, u32 val)
@@ -121,6 +122,8 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	int empty;
 	u32 iflags = K_READ_REG(INFO_STATUS);
 
+	pr_debug("dma_isr\n");
+
 	K_WRITE_REG(INFO_STATUS, 0xf);
 
 	// spurious interrupt
@@ -136,13 +139,13 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	empty = k3.fill == k3.drain;
 
 	if (!empty) {
-		pr_info("irq: not empty\n");
+		pr_debug("dmaq not empty\n");
 		// Queue is not empty. Dispatch the next buffer
 		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
 		fifo_write(BUFA_CONF, dma[k3.drain].size);
 		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	} else {
-		pr_info("irq: empty\n");
+		pr_debug("dmaq empty\n");
 		// Queue is empty. Wake up unbind_dma
 		if (!k3.dma_on) {
 			pr_info("irq: wuius %d %d \n", k3.fill, k3.drain);
@@ -154,10 +157,10 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 
 	// Wake up sleeping user if buffer was full.
 	if (k3.full) {
+		pr_debug("k3 full\n");
 		k3.full = 0;
 		wake_up_interruptible(&dma_snooze);
 	}
-
 
 	return IRQ_HANDLED;
 }
@@ -168,6 +171,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 void initiate_transfer(unsigned long size)
 {
 	unsigned long flags;
+	pr_debug("initiate_transfer\n");
 
 	spin_lock_irqsave(&k3.lock, flags);
 	dma[k3.fill].size = size;
@@ -282,13 +286,13 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		// disable graphics mode.
 		else if (arg == GRAPHICS_OFF) {
-			pr_info("gfx off\n");
+			pr_debug("turning off gfx\n");
 			if (k3.dma_on) {
 				kyouko3_ioctl(fp, UNBIND_DMA, 0);
 			} else {
 				fifo_flush();
 			}
-			pr_info("gfx offf\n");
+			pr_debug("done\n");
 			K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
 			K_WRITE_REG(CONF_MODESET, 0);
 			k3.graphics_on = 0;
@@ -313,16 +317,17 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		return 0;
 	case UNBIND_DMA:
-		pr_info("unbind dma\n");
+		pr_debug("unbinding dma\n");
 		// set flag to wake up user when buffer is empty
-		pr_info("dmaon = 0 %d %d \n", k3.fill, k3.drain);
 		k3.dma_on = 0;
 		// snooze user and empty queue
 		if (k3.fill != k3.drain) {
-			pr_info("ubdma wait\n");
+			pr_debug("unbind_snooze\n");
 			wait_event_interruptible(unbind_snooze,
 						 k3.fill == k3.drain);
-		} 		pr_info("unbind dmaaa\n");
+		}
+		pr_debug("starting\n");
+
 		// Unmap buffers.
 		for (i = 0; i < DMA_BUFNUM; i++) {
 			vm_munmap(dma[i].u_base, DMA_BUFSIZE);
@@ -332,6 +337,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		K_WRITE_REG(CONF_INTERRUPT, 0);
 		free_irq(k3.pdev->irq, &k3);
 		pci_disable_msi(k3.pdev);
+		pr_debug("done\n");
 		break;
 	case START_DMA:
 		if (copy_from_user(&count, argp, sizeof(unsigned int)))
@@ -426,6 +432,7 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 
 int kyouko3_init(void)
 {
+	pr_debug("hi\n");
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;

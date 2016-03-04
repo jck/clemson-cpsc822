@@ -22,7 +22,7 @@ user: user.c
 .PHONY: rmod
 rmod: module
 	rsync kyouko3.ko 822:
-	ssh 822 'rmmod kyouko3; insmod kyouko3.ko'
+	ssh 822 'rmmod kyouko3; insmod kyouko3.ko dyndbg=+pmfl'
 
 .PHONY: ruser
 ruser: user
