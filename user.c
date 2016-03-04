@@ -234,8 +234,8 @@ void test_dma_bind_close() {
 }
 
 int tests() {
-  // test_gfx_on_then_close();
-  // test_dma_bind_unbind();
+  test_gfx_on_then_close();
+  test_dma_bind_unbind();
   test_dma_bind_close();
   return 0;
 }
