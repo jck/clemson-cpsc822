@@ -5,3 +5,5 @@
 modules.order
 Module.symvers
 user
+tests
+demos
