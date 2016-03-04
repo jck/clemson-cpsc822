@@ -32,13 +32,6 @@ DECLARE_WAIT_QUEUE_HEAD(dma_snooze);
 // completely empty before exiting.
 DECLARE_WAIT_QUEUE_HEAD(unbind_snooze);
 
-void mmsinfo (void)
-{
-	struct mm_struct *mm = current->mm;
-	pr_debug("mms: %d\n", mm->mmap_sem.count);
-
-}
-
 struct phys_region {
 	phys_addr_t p_base;
 	unsigned long len;
@@ -252,7 +245,6 @@ int dma_init(struct file *fp)
 		return ret;
 	}
 
-	mmsinfo();
 	for (i = 0; i < DMA_BUFNUM; i++) {
 		k3.fill = i;
 		dma[i].k_base =
@@ -266,7 +258,6 @@ int dma_init(struct file *fp)
 		}
 		dma[i].u_base = addr;
 	}
-	mmsinfo();
 	// We don't need locking here because we have not enabled interrupts on
 	// the device yet.
 	k3.fill = 0;
@@ -278,11 +269,25 @@ int dma_init(struct file *fp)
 	return ret;
 }
 
+void dma_stop(void) {
+	K_WRITE_REG(CONF_INTERRUPT, 0);
+	pci_disable_msi(k3.pdev);
+	free_irq(k3.pdev->irq, &k3);
+}
+
+void dma_free_bufs(void) {
+	int i = 0;
+	for (i = 0; i < DMA_BUFNUM; i++) {
+		vm_munmap(dma[i].u_base, DMA_BUFSIZE);
+		pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
+				    dma[i].handle);
+	}
+}
+
 long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
 	struct fifo_entry entry;
 	void __user *argp = (void __user *)arg;
-	int i;
 	long ret = 0;
 	int count;
 
@@ -323,7 +328,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		else if (arg == GRAPHICS_OFF) {
 			pr_debug("turning off gfx\n");
 			if (k3.dma_on) {
-				kyouko3_ioctl(fp, UNBIND_DMA, 0);
+				// kyouko3_ioctl(fp, UNBIND_DMA, 0);
 			} else {
 				fifo_flush();
 			}
@@ -363,18 +368,8 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 			wait_event_interruptible(unbind_snooze,
 						 k3.fill == k3.drain);
 		}
-		pr_debug("starting\n");
-		mmsinfo();
-
-		// Unmap buffers.
-		// for (i = 0; i < DMA_BUFNUM; i++) {
-		// 	vm_munmap(dma[i].u_base, DMA_BUFSIZE);
-		// 	pci_free_consistent(k3.pdev, DMA_BUFSIZE, dma[i].k_base,
-		// 			    dma[i].handle);
-		// }
-		K_WRITE_REG(CONF_INTERRUPT, 0);
-		free_irq(k3.pdev->irq, &k3);
-		pci_disable_msi(k3.pdev);
+		dma_stop();
+		dma_free_bufs();
 		pr_debug("done\n");
 		break;
 	case START_DMA:
@@ -403,7 +398,13 @@ int kyouko3_release(struct inode *inode, struct file *fp)
 {
 	pr_alert("release!!\n");
 	pr_debug("rel\n");
-	// mmsinfo();
+	// User bailed. Since we can't use vm_munmap inside release because of
+	// deadlocks, we stop the dma but don't fully clean up.
+	if (k3.dma_on) {
+		dma_stop();
+		k3.dma_on = false;
+	}
+
 	kyouko3_ioctl(fp, VMODE, GRAPHICS_OFF);
 	fifo_flush();
 	iounmap(k3.control.k_base);
@@ -477,7 +478,6 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 int kyouko3_init(void)
 {
 	pr_debug("hi\n");
-	mmsinfo();
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;
