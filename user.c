@@ -21,6 +21,11 @@
 
 #include "kyouko3.h"
 
+// Debug macros
+
+// Print current function name
+#define PFN() printf("%s\n", __PRETTY_FUNCTION__);
+
 /*
  * Container for briefly storing dma information.
  */
@@ -176,22 +181,68 @@ void dma_triangles() {
   gfx_off();
 }
 
+int demos() {
+  // Demos
+  user_init();
+
+  fifo_triangle();
+  dma_triangles();
+
+  user_exit();
+  return 0;
+}
+
 void test_fifo_stress_simple() {
+  // Works most of the time. However, sometimes K_WRITE_REG fifo_head
+  // doesn't seem to work, and it ends up in an infinite loop.
   for (int i=0; i < 100; i++) {
     fifo_triangle();
   }
 }
 
-int main() {
+void test_gfx_on_then_close() {
+  // Works
+  PFN();
   user_init();
-
-  // Demos
-  // fifo_triangle();
-  // dma_triangles();
-
-  //Tests
-  test_fifo_stress_simple();
-
+  gfx_on();
+  sleep(5);
   user_exit();
+}
+
+void test_dma_bind_unbind() {
+  // Works
+  user_init();
+  gfx_on();
+  struct dma_req req;
+  bind_dma(&req);
+  sleep(10);
+  unbind_dma();
+  user_exit();
+}
+
+void test_dma_bind_close() {
+  PFN();
+  user_init();
+  gfx_on();
+  sleep(10);
+  struct dma_req req;
+  bind_dma(&req);
+  sleep(100);
+  user_exit();
+}
+
+int tests() {
+  // test_gfx_on_then_close();
+  // test_dma_bind_unbind();
+  test_dma_bind_close();
   return 0;
+}
+
+
+int main() {
+#ifdef TESTING
+  return tests();
+#else
+  return demos();
+#endif
 }
