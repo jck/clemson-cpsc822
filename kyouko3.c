@@ -61,8 +61,10 @@ struct kyouko3_vars {
 	struct pci_dev *pdev;
 	u32 fill;
 	u32 drain;
-	bool full;
 	spinlock_t lock;
+	bool dma_snoozing;
+	bool unbind_snoozing;
+
 } k3;
 
 /* Efficient way to increment index of circ buffer whose size is a power of two.
@@ -128,10 +130,9 @@ void fifo_write(u32 cmd, u32 val)
  */
 irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 {
-	int empty;
+	int cnt;
 	u32 iflags = K_READ_REG(INFO_STATUS);
 
-	pr_debug("dma_isr\n");
 
 	K_WRITE_REG(INFO_STATUS, 0xf);
 
@@ -140,39 +141,38 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 		return IRQ_NONE;
 	}
 
-	// Protect data which might be accessed from process context
 
-	// we are ready to drain the next buffer
+	// we just drained a buffer
 	dmaq_inc_idx(&k3.drain);
 
-	empty = k3.fill == k3.drain;
+	// number of elements in the DMA queue now.
+	cnt = dmaq_cnt();
 
-	if (!empty) {
-		pr_debug("dmaq not empty\n");
-		// Queue is not empty. Dispatch the next buffer
-		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
-		fifo_write(BUFA_CONF, dma[k3.drain].size);
-		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
-	} else {
-		pr_debug("dmaq empty\n");
-		// Queue is empty. Wake up unbind_dma
-		if (!k3.dma_on) {
-			pr_info("irq: wuius %d %d \n", k3.fill, k3.drain);
-			pr_info("irq: wake unbind_snooze\n");
+	pr_debug("dma_isr: cnt %d\n", cnt);
+
+	if (cnt == 0) {
+		// Queue is empty. If user was ready to bail, wake him up.
+		if (k3.unbind_snoozing) {
+			pr_debug("unbind_snoozing\n");
+			k3.unbind_snoozing = false;
 			wake_up_interruptible(&unbind_snooze);
 			return IRQ_HANDLED;
 		}
+	} else {
+		// Queue is non-empty. dispatch the next entry
+		fifo_write(BUFA_ADDR, dma[k3.drain].handle);
+		fifo_write(BUFA_CONF, dma[k3.drain].size);
+		K_WRITE_REG(FIFO_HEAD, k3.fifo.head);
 	}
 
-	// Wake up sleeping user if buffer was full.
-	if (k3.full) {
-		pr_debug("k3 full\n");
-		k3.full = 0;
+	if (k3.dma_snoozing) {
+		k3.dma_snoozing = false;
 		wake_up_interruptible(&dma_snooze);
 	}
 
 	return IRQ_HANDLED;
 }
+
 
 /*
  * Initiate a DMA request if possible.
@@ -203,12 +203,12 @@ void initiate_transfer(unsigned long size)
 
 		spin_unlock_irqrestore(&k3.lock, flags);
 		return;
-	} else if (cnt == DMA_BUFSIZE -1) {
-		// The entry filled up the Queue.
+	} else if (cnt == DMA_BUFNUM -1) {
+		// This entry filled up the Queue.
 		// We wait here till a buffer is drained.
-		k3.full = true;
+		k3.dma_snoozing = true;
 		spin_unlock_irqrestore(&k3.lock, flags);
-		wait_event_interruptible(dma_snooze, !k3.full);
+		wait_event_interruptible(dma_snooze, !k3.dma_snoozing);
 		return;
 	}
 
@@ -271,8 +271,8 @@ int dma_init(struct file *fp)
 
 void dma_stop(void) {
 	K_WRITE_REG(CONF_INTERRUPT, 0);
-	pci_disable_msi(k3.pdev);
 	free_irq(k3.pdev->irq, &k3);
+	pci_disable_msi(k3.pdev);
 }
 
 void dma_free_bufs(void) {
@@ -290,6 +290,7 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 	void __user *argp = (void __user *)arg;
 	long ret = 0;
 	int count;
+	unsigned long flags;
 
 	switch (cmd) {
 	case VMODE:
@@ -360,16 +361,23 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		return 0;
 	case UNBIND_DMA:
 		pr_debug("unbinding dma\n");
-		// set flag to wake up user when buffer is empty
-		k3.dma_on = 0;
-		// snooze user and empty queue
-		if (k3.fill != k3.drain) {
-			pr_debug("unbind_snooze\n");
-			wait_event_interruptible(unbind_snooze,
-						 k3.fill == k3.drain);
+		spin_lock_irqsave(&k3.lock, flags);
+		if (dmaq_cnt() != 0) {
+			pr_debug("unbind_snoozing\n");
+			k3.unbind_snoozing = true;
+			spin_unlock_irqrestore(&k3.lock, flags);
+			wait_event_interruptible(unbind_snooze, !k3.unbind_snoozing);
+			pr_debug("unbind_snoozing done\n");
+
+		} else {
+			spin_unlock_irqrestore(&k3.lock, flags);
+
 		}
-		dma_stop();
+		pr_debug("real unbind dma\n");
+
 		dma_free_bufs();
+		dma_stop();
+		k3.dma_on = 0;
 		pr_debug("done\n");
 		break;
 	case START_DMA:
@@ -434,9 +442,6 @@ int kyouko3_mmap(struct file *fp, struct vm_area_struct *vma)
 		ret = vm_iomap_memory(vma, dma[k3.fill].handle, DMA_BUFSIZE);
 		break;
 	}
-	if (ret) {
-		pr_debug("k3 mmap failed\n");
-	}
 	return ret;
 }
 
@@ -477,7 +482,6 @@ struct pci_driver kyouko3_pci_drv = {.name = "kyouko3_pci_drv",
 
 int kyouko3_init(void)
 {
-	pr_debug("hi\n");
 	cdev_init(&kyouko3_dev, &kyouko3_fops);
 	cdev_add(&kyouko3_dev, MKDEV(500, 127), 1);
 	k3.dma_on = 0;
