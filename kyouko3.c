@@ -149,7 +149,7 @@ irqreturn_t dma_isr(int irq, void *dev_id, struct pt_regs *regs)
 	pr_debug("dma_isr: cnt %d\n", cnt);
 
 	if (cnt == 0) {
-		// Queue is empty. If user was ready to bail, wake him up.
+		// Queue is empty. If user was ready to unbind, wake him up.
 		if (k3.unbind_snoozing) {
 			pr_debug("unbind_snoozing\n");
 			k3.unbind_snoozing = false;
@@ -331,11 +331,9 @@ long kyouko3_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		}
 		// disable graphics mode.
 		else if (arg == GRAPHICS_OFF) {
-			pr_debug("turning off gfx\n");
 			if (!k3.dma_on) {
 				fifo_flush();
 			}
-			pr_debug("done\n");
 			K_WRITE_REG(CONF_ACCELERATION, 0x80000000);
 			K_WRITE_REG(CONF_MODESET, 0);
 			k3.graphics_on = 0;
