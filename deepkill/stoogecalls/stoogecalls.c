@@ -27,3 +27,10 @@ SYSCALL_DEFINE0(deepsleep)
 {
   return sleep_on(&gone);
 }
+
+
+SYSCALL_DEFINE2(deepkill, pid_t, pid, int, sig)
+{
+	pr_info("deepkill pid: %d\n",pid);
+	return 0;
+}
