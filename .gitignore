@@ -3,6 +3,7 @@
 *.cmd
 *.mod*
 modules.order
+modules.builtin
 Module.symvers
 user
 tests
