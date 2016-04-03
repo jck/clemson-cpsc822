@@ -29,8 +29,8 @@ SYSCALL_DEFINE0(deepsleep)
 }
 
 
-SYSCALL_DEFINE2(deepkill, pid_t, pid, int, sig)
+SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 {
-	pr_info("deepkill pid: %d\n",pid);
+	pr_info("smunch pid: %d; signals: %lx", pid, bit_pattern);
 	return 0;
 }
