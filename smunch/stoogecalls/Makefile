@@ -1,1 +1,1 @@
-obj-y += stoogecalls.o
+obj-y += deepsleep.o smunch.o

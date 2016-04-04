@@ -1,7 +1,5 @@
-#include <linux/linkage.h>
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
-#include <linux/printk.h>
 
 __sched int sleep_on(wait_queue_head_t *q)
 {
@@ -26,11 +24,4 @@ DECLARE_WAIT_QUEUE_HEAD(gone);
 SYSCALL_DEFINE0(deepsleep)
 {
   return sleep_on(&gone);
-}
-
-
-SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
-{
-	pr_info("smunch pid: %d; signals: %lx", pid, bit_pattern);
-	return 0;
 }
