@@ -1,1 +1,1 @@
-all: smuncher
+all: smuncher zombiegen
