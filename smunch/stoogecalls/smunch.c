@@ -7,11 +7,10 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 	unsigned long flags;
 	sigset_t new_set;
 
-	pr_info("smunch pid: %d; signals: %lx\n", pid, bit_pattern);
+	p = pid_task(find_vpid(pid), PIDTYPE_PID);
+	siginitset(&new_set, bit_pattern);
 
-	rcu_read_lock();
-	p = find_task_by_vpid(pid);
-	rcu_read_unlock();
+	pr_info("smunch pid: %d; signals: %lx\n", pid, bit_pattern);
 
 	if (!p) {
 		pr_warn("smunch: No task with pid == %d found\n", pid);
@@ -23,14 +22,12 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 		return -1;
 	}
 
-	siginitset(&new_set, bit_pattern);
-
-	if (sigismember(&new_set, SIGKILL)) {
-		pr_info("KILL DASH NINE\n");
-	}
 
 	if (p->exit_state == EXIT_ZOMBIE) {
-		pr_info("braiiins\n");
+		if (sigismember(&new_set, SIGKILL)) {
+			release_task(p);
+		}
+		return 0;
 	}
 
 	if (!lock_task_sighand(p, &flags)) {
