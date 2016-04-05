@@ -24,6 +24,7 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 
 
 	if (p->exit_state == EXIT_ZOMBIE) {
+		pr_info("zombie\n");
 		if (sigismember(&new_set, SIGKILL)) {
 			release_task(p);
 		}
