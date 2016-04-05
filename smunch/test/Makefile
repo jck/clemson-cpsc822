@@ -1,3 +1,3 @@
 CFLAGS= -std=gnu99
 
-all: smuncher zombiegen
+all: smuncher zombiegen deepsleeper
