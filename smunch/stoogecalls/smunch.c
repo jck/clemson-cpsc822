@@ -16,8 +16,8 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 		return -1;
 	}
 
-	// Multithreaded process
-	if (!thread_group_empty(p))
+	// Multithreaded  or traced process
+	if (!thread_group_empty(p) || task_is_traced(p))
 		return -1;
 
 	siginitset(&new_set, bit_pattern);
