@@ -5,10 +5,10 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 {
 	struct task_struct *p;
 	unsigned long flags;
+	sigset_t new_set;
 
 	pr_info("smunch pid: %d; signals: %lx\n", pid, bit_pattern);
 
-	// Figure out best way to get PTE
 	rcu_read_lock();
 	p = find_task_by_vpid(pid);
 	rcu_read_unlock();
@@ -21,6 +21,12 @@ SYSCALL_DEFINE2(smunch, int, pid, unsigned long, bit_pattern)
 	if (!thread_group_empty(p)) {
 		pr_warn("smunch does not apply to multithreaded processes\n");
 		return -1;
+	}
+
+	siginitset(&new_set, bit_pattern);
+
+	if (sigismember(&new_set, SIGKILL)) {
+		pr_info("KILL DASH NINE\n");
 	}
 
 	if (p->exit_state == EXIT_ZOMBIE) {
