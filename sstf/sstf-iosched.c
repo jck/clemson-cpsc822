@@ -91,7 +91,7 @@ static void sstf_exit_queue(struct elevator_queue *e)
 	kfree(nd);
 }
 
-static struct elevator_type elevator_noop = {
+static struct elevator_type elevator_sstf = {
 	.ops = {
 		.elevator_merge_req_fn		= sstf_merged_requests,
 		.elevator_dispatch_fn		= sstf_dispatch,
@@ -107,14 +107,15 @@ static struct elevator_type elevator_noop = {
 
 static int __init sstf_init(void)
 {
+	pr_info("Initializing sstf\n");
 	pr_debug("Initializing sstf scheduler\n");
-	return elv_register(&elevator_noop);
+	return elv_register(&elevator_sstf);
 }
 
 static void __exit sstf_exit(void)
 {
 	pr_debug("Exiting sstf scheduler\n");
-	elv_unregister(&elevator_noop);
+	elv_unregister(&elevator_sstf);
 }
 
 module_init(sstf_init);
