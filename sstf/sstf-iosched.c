@@ -107,11 +107,13 @@ static struct elevator_type elevator_noop = {
 
 static int __init sstf_init(void)
 {
+	pr_debug("Initializing sstf scheduler\n");
 	return elv_register(&elevator_noop);
 }
 
 static void __exit sstf_exit(void)
 {
+	pr_debug("Exiting sstf scheduler\n");
 	elv_unregister(&elevator_noop);
 }
 
