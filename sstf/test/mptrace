@@ -1,0 +1,71 @@
+echo "start"
+#date
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /usr  123$q 0.5  0.7  > out.1 ; 
+done
+echo "1 done"
+#date
+) &
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /home 125$q 0.8  0.8  > out.2 
+done
+echo "2 done"
+#date 
+) &
+
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /etc 778$q 0.9  0.8  > out.3 
+done
+echo "3 done"
+#date
+) &
+
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /bin     523$q 0.3  0.6  > out.4 
+done
+echo "4 done"
+#date 
+) &
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /usr 135$q 0.9  0.8  > out.5 
+done
+echo "5 done"
+#date 
+) &
+
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /home 623$q 0.9  0.8  > out.6 
+done
+echo "6 done"
+#date 
+) &
+
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /etc  923$q 0.5  0.7  > out.7 
+done
+echo "7 done"
+#date 
+) &
+
+(while true  
+do
+q=`shuf -i 1-10 -n 1`
+./randread /   823$q 0.3  0.6  > out.8 
+done
+echo "8 done"
+#date 
+) &
