@@ -23,6 +23,8 @@ credit if you're writing up experiments on it ...
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <string.h>
+#include <unistd.h>
 
 /* These constants control the workload generation */
 
@@ -45,7 +47,7 @@ float unival()
 /**/
 /* Read a file in sequential hunks of 512 bytes */
 
-readfile(
+void readfile(
 char *fname)
 {
    FILE *input;
@@ -70,7 +72,7 @@ char *fname)
 /**/
 /* Recover the inode data for the current file or directory */
 
-statfile(
+void statfile(
 char *fname,           /* Name of the file to stat..           */
 struct stat *sbuf,     /* Address of the stat return buffer    */
 char *cwdbuf)          /* Name of the active directory.        */
@@ -87,10 +89,43 @@ char *cwdbuf)          /* Name of the active directory.        */
 
 }
 
+void procdir(
+DIR *dirp,               /* Open directory handle.           */
+char *cwdbuf);            /* Currently active directory       */
+
+void nextdir(
+char *dirname)
+{
+   DIR *dirp;               /* Directory handle */
+   char cwdbuf[512];        /* Name buffer.     */
+
+   if (unival() >= dirprob)
+      return;
+
+   dirprob *= dirfactor;
+   dirp = opendir(dirname);
+
+   if (dirp != 0)
+   {
+      chdir(dirname);
+      getcwd(cwdbuf, sizeof(cwdbuf));
+      //printf("\n---> Processing directory %s \n", cwdbuf);
+      if(strcmp(cwdbuf,"/proc")) procdir(dirp, cwdbuf);
+      closedir(dirp);
+   /* chdir("..");   */
+   }
+   else
+   {
+      printf("Failed to open directory %s\n", dirname);
+      printf("From directory %s \n", cwdbuf);
+   }
+   dirprob /= dirfactor;
+}
+
 /**/
 /* Process all the files in the directory pointed to by DIRP */
 
-procdir(
+void procdir(
 DIR *dirp,               /* Open directory handle.           */
 char *cwdbuf)            /* Currently active directory       */
 {
@@ -142,36 +177,8 @@ char *cwdbuf)            /* Currently active directory       */
 
 /* Start a new directory */
 
-nextdir(
-char *dirname)
-{
-   DIR *dirp;               /* Directory handle */
-   char cwdbuf[512];        /* Name buffer.     */
 
-   if (unival() >= dirprob)
-      return;
-
-   dirprob *= dirfactor;
-   dirp = opendir(dirname);
-
-   if (dirp != 0)
-   {
-      chdir(dirname);
-      getcwd(cwdbuf, sizeof(cwdbuf));
-      //printf("\n---> Processing directory %s \n", cwdbuf);
-      if(strcmp(cwdbuf,"/proc")) procdir(dirp, cwdbuf);
-      closedir(dirp);
-   /* chdir("..");   */
-   }
-   else
-   {
-      printf("Failed to open directory %s\n", dirname);
-      printf("From directory %s \n", cwdbuf);
-   }
-   dirprob /= dirfactor;
-}
-
-main(
+int main(
 int   argc,
 char  **argv)
 {
