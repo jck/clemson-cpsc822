@@ -27,7 +27,7 @@ void dump_reqtrace()
 		pid = trace.data[i].pid;
 		serv_time = trace.data[i].serv_time;
 		wait_time = trace.data[i].wait_time;
-		printf("pid: %d, serv_time: %d, wait_time: %d", pid, serv_time, wait_time);
+		printf("pid: %d, serv_time: %d, wait_time: %d\n", pid, serv_time, wait_time);
 	}
 }
 
