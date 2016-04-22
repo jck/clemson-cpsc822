@@ -23,12 +23,12 @@ void dump_reqtrace()
 	int pid, serv_time, wait_time;
 
 	get_reqtrace(&trace);
-	printf("trace count: %d\n", trace.count);
+	printf("pid,serv_time,wait_time\n");
 	for (int i=0; i<trace.count; i++) {
 		pid = trace.data[i].pid;
 		serv_time = trace.data[i].serv_time;
 		wait_time = trace.data[i].wait_time;
-		printf("pid: %d, serv_time: %d, wait_time: %d\n", pid, serv_time, wait_time);
+		printf("%d,%d,%d\n", pid, serv_time, wait_time);
 	}
 }
 
