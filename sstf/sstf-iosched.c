@@ -9,7 +9,9 @@
 #include <linux/init.h>
 
 struct sstf_data {
-	struct list_head queue;
+	// 0 is low_queue, 1 is high_queue
+	struct list_head queues[2];
+	sector_t pos;
 };
 
 static void sstf_merged_requests(struct request_queue *q, struct request *rq,
@@ -18,64 +20,104 @@ static void sstf_merged_requests(struct request_queue *q, struct request *rq,
 	list_del_init(&next->queuelist);
 }
 
+#define distance()
+
 static int sstf_dispatch(struct request_queue *q, int force)
 {
-	struct sstf_data *nd = q->elevator->elevator_data;
+	struct sstf_data *sd = q->elevator->elevator_data;
+	int i, dist, best_dist;
+	struct request *rq, *best_rq;
 
-	if (!list_empty(&nd->queue)) {
-		struct request *rq;
-		rq = list_entry(nd->queue.next, struct request, queuelist);
-		list_del_init(&rq->queuelist);
-		elv_dispatch_sort(q, rq);
-		return 1;
+
+	best_rq = NULL;
+	best_dist = -1;
+	for (i=0; i<2; i++) {
+		rq = list_first_entry_or_null(&sd->queues[i], struct request, queuelist);
+		if (rq == NULL)
+			continue;
+
+		dist = abs(sd->pos - blk_rq_pos(rq));
+		if (best_rq == NULL || dist < best_dist) {
+			best_dist = dist;
+			best_rq = rq;
+
+		}
 	}
-	return 0;
+
+	if (best_rq == NULL)
+		return 0;
+
+	sd->pos = rq_end_sector(best_rq);
+	list_del_init(&best_rq->queuelist);
+	elv_dispatch_sort(q, best_rq);
+	return 1;
 }
+
 
 static void sstf_add_request(struct request_queue *q, struct request *rq)
 {
-	struct sstf_data *nd = q->elevator->elevator_data;
+	struct sstf_data *sd = q->elevator->elevator_data;
 
-	list_add_tail(&rq->queuelist, &nd->queue);
+	// 0 = low_queue, 1 = high_queue
+	int choose = blk_rq_pos(rq) > sd->pos;
+	struct list_head *queue = &sd->queues[choose];
+	struct request *r;
+
+	list_for_each_entry(r, queue, queuelist) {
+		if ((blk_rq_pos(r) == blk_rq_pos(rq))
+		    || ((blk_rq_pos(r) > blk_rq_pos(rq)) == choose)) {
+			list_add(&rq->queuelist, &r->queuelist);
+			return;
+		}
+	}
+
+	// List is either empty or this element needs to be in the end.
+	list_add_tail(&rq->queuelist, queue);
 }
 
 static struct request *
 sstf_former_request(struct request_queue *q, struct request *rq)
 {
-	struct sstf_data *nd = q->elevator->elevator_data;
+	// struct sstf_data *sd = q->elevator->elevator_data;
 
-	if (rq->queuelist.prev == &nd->queue)
-		return NULL;
-	return list_entry(rq->queuelist.prev, struct request, queuelist);
+	return NULL;
+	// if (rq->queuelist.prev == &nd->queue)
+	// 	return NULL;
+
+	// return list_entry(rq->queuelist.prev, struct request, queuelist);
 }
 
 static struct request *
 sstf_latter_request(struct request_queue *q, struct request *rq)
 {
-	struct sstf_data *nd = q->elevator->elevator_data;
+	// struct sstf_data *sd = q->elevator->elevator_data;
 
-	if (rq->queuelist.next == &nd->queue)
-		return NULL;
-	return list_entry(rq->queuelist.next, struct request, queuelist);
+	return NULL;
+	// if (rq->queuelist.next == &sd->queue)
+	// 	return NULL;
+	// return list_entry(rq->queuelist.next, struct request, queuelist);
 }
 
-static int sstf_init_queue(struct request_queue *q, struct elevator_type *e)
+static int sstf_init_queues(struct request_queue *q, struct elevator_type *e)
 {
-	struct sstf_data *nd;
+	struct sstf_data *sd;
 	struct elevator_queue *eq;
 
 	eq = elevator_alloc(q, e);
 	if (!eq)
 		return -ENOMEM;
 
-	nd = kmalloc_node(sizeof(*nd), GFP_KERNEL, q->node);
-	if (!nd) {
+	sd = kmalloc_node(sizeof(*sd), GFP_KERNEL, q->node);
+	if (!sd) {
 		kobject_put(&eq->kobj);
 		return -ENOMEM;
 	}
-	eq->elevator_data = nd;
+	eq->elevator_data = sd;
 
-	INIT_LIST_HEAD(&nd->queue);
+	INIT_LIST_HEAD(&sd->queues[0]);
+	INIT_LIST_HEAD(&sd->queues[1]);
+
+	sd->pos = 0;
 
 	spin_lock_irq(q->queue_lock);
 	q->elevator = eq;
@@ -83,12 +125,13 @@ static int sstf_init_queue(struct request_queue *q, struct elevator_type *e)
 	return 0;
 }
 
-static void sstf_exit_queue(struct elevator_queue *e)
+static void sstf_exit_queues(struct elevator_queue *e)
 {
-	struct sstf_data *nd = e->elevator_data;
+	struct sstf_data *sd = e->elevator_data;
 
-	BUG_ON(!list_empty(&nd->queue));
-	kfree(nd);
+	BUG_ON(!list_empty(&sd->queues[0]));
+	BUG_ON(!list_empty(&sd->queues[1]));
+	kfree(sd);
 }
 
 static struct elevator_type elevator_sstf = {
@@ -98,8 +141,8 @@ static struct elevator_type elevator_sstf = {
 		.elevator_add_req_fn		= sstf_add_request,
 		.elevator_former_req_fn		= sstf_former_request,
 		.elevator_latter_req_fn		= sstf_latter_request,
-		.elevator_init_fn		= sstf_init_queue,
-		.elevator_exit_fn		= sstf_exit_queue,
+		.elevator_init_fn		= sstf_init_queues,
+		.elevator_exit_fn		= sstf_exit_queues,
 	},
 	.elevator_name = "sstf",
 	.elevator_owner = THIS_MODULE,
@@ -107,14 +150,11 @@ static struct elevator_type elevator_sstf = {
 
 static int __init sstf_init(void)
 {
-	pr_info("Initializing sstf\n");
-	pr_debug("Initializing sstf scheduler\n");
 	return elv_register(&elevator_sstf);
 }
 
 static void __exit sstf_exit(void)
 {
-	pr_debug("Exiting sstf scheduler\n");
 	elv_unregister(&elevator_sstf);
 }
 
