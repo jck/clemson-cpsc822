@@ -23,7 +23,8 @@ void dump_reqtrace()
 	int pid, serv_time, wait_time;
 
 	get_reqtrace(&trace);
-	for (int i=0; i<100; i++) {
+	printf("trace count: %d\n", trace.count);
+	for (int i=0; i<trace.count; i++) {
 		pid = trace.data[i].pid;
 		serv_time = trace.data[i].serv_time;
 		wait_time = trace.data[i].wait_time;
@@ -33,9 +34,8 @@ void dump_reqtrace()
 
 int main()
 {
-	printf("sup\n");
 	conf_reqtrace(1);
-	sleep(60);
-	conf_reqtrace(0);
+	sleep(10);
 	dump_reqtrace();
+	conf_reqtrace(0);
 }
