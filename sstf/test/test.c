@@ -35,7 +35,7 @@ void dump_reqtrace()
 int main()
 {
 	conf_reqtrace(1);
-	sleep(10);
+	sleep(100);
 	dump_reqtrace();
 	conf_reqtrace(0);
 }

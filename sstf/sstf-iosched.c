@@ -20,8 +20,6 @@ static void sstf_merged_requests(struct request_queue *q, struct request *rq,
 	list_del_init(&next->queuelist);
 }
 
-#define distance()
-
 static int sstf_dispatch(struct request_queue *q, int force)
 {
 	struct sstf_data *sd = q->elevator->elevator_data;
@@ -40,7 +38,6 @@ static int sstf_dispatch(struct request_queue *q, int force)
 		if (best_rq == NULL || dist < best_dist) {
 			best_dist = dist;
 			best_rq = rq;
-
 		}
 	}
 
@@ -61,8 +58,8 @@ static void sstf_add_request(struct request_queue *q, struct request *rq)
 	// 0 = low_queue, 1 = high_queue
 	int choose = blk_rq_pos(rq) > sd->pos;
 	struct list_head *queue = &sd->queues[choose];
-	struct request *r;
 
+	struct request *r;
 	list_for_each_entry(r, queue, queuelist) {
 		if ((blk_rq_pos(r) == blk_rq_pos(rq))
 		    || ((blk_rq_pos(r) > blk_rq_pos(rq)) == choose)) {
